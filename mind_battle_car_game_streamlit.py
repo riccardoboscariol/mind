@@ -1,12 +1,12 @@
 import streamlit as st
-import requests
-import pandas as pd
+import time
 import numpy as np
-from scipy.stats import mannwhitneyu, binomtest
-import matplotlib.pyplot as plt
+import pandas as pd
+import requests
 import io
+from PIL import Image
 
-# Funzione per ottenere i bit casuali da random.org
+# Funzioni per ottenere bit casuali da random.org
 def get_random_bits_from_random_org(num_bits):
     url = "https://www.random.org/integers/"
     params = {
@@ -19,16 +19,8 @@ def get_random_bits_from_random_org(num_bits):
         "rnd": "new"
     }
     response = requests.get(url, params=params)
-    if response.status_code == 200:
-        try:
-            random_bits = list(map(int, response.text.strip().split()))
-            return random_bits
-        except ValueError as e:
-            st.error(f"Errore nella conversione dei dati da random.org: {e}")
-            return []
-    else:
-        st.error(f"Errore nella richiesta a random.org: {response.status_code}")
-        return []
+    random_bits = list(map(int, response.text.strip().split()))
+    return random_bits
 
 # Funzione per calcolare l'entropia
 def calculate_entropy(bits):
@@ -39,129 +31,152 @@ def calculate_entropy(bits):
     entropy = -np.sum(p * np.log2(p))
     return entropy
 
-st.title("Generatore di Anomalie Casuali Binari")
+# Funzione per spostare l'auto
+def move_car(car_pos, distance):
+    car_pos += distance
+    if car_pos > 1000:  # Se l'auto esce dallo schermo, riportala all'inizio
+        car_pos = 1000
+    return car_pos
 
-num_bits = 10000
-
-use_truerng = False
-try:
-    import serial
-    import serial.tools.list_ports
-
-    def list_serial_ports():
-        return [port.device for port in serial.tools.list_ports.comports()]
-
-    def get_random_bits_from_truerng(num_bits, port):
-        ser = serial.Serial(port, 9600, timeout=1)
-        random_bytes = ser.read(num_bits // 8)
-        ser.close()
-        random_bits = [int(bit) for byte in random_bytes for bit in format(byte, '08b')]
-        return random_bits
-
-    ports = list_serial_ports()
-    if ports:
-        use_truerng = True
-        true_rng_port = ports[0]
-        st.warning("Chiavetta TrueRNG3 rilevata. Verrà utilizzata per generare i numeri casuali.")
-    else:
-        st.warning("Attenzione! Non è stata rilevata la chiavetta 'TrueRNG3' indispensabile per il compito.\nVerrà quindi utilizzato random.org per generare i numeri casuali.")
-
-except ModuleNotFoundError:
-    st.warning("Attenzione! Non è stata rilevata la chiavetta 'TrueRNG3' indispensabile per il compito.\nVerrà quindi utilizzato random.org per generare i numeri casuali.")
-
-# Posizione iniziale delle auto
-car_x = 0
-car2_x = 0
-
-if st.button("Avvia Generazione"):
-    if use_truerng:
-        random_bits = get_random_bits_from_truerng(num_bits, true_rng_port)
-    else:
-        random_bits = get_random_bits_from_random_org(num_bits)
+# Funzione principale
+def main():
+    st.title("Generatore di Anomalie Casuali Binari")
     
-    if not random_bits:
-        st.error("Errore nella generazione dei numeri casuali. Riprova.")
-    else:
-        random_bits_1 = random_bits[:num_bits//2]
-        random_bits_2 = random_bits[num_bits//2:]
+    start_button = st.button("Avvia Generazione")
+    stop_button = st.button("Blocca Generazione")
+    download_button = st.button("Scarica Dati")
+    download_graph_button = st.button("Scarica Grafico")
+    stats_button = st.button("Mostra Analisi Statistiche")
+    reset_button = st.button("Resetta Gioco")
+    
+    car_pos = 50
+    car2_pos = 50
+    car1_moves = 0
+    car2_moves = 0
+    random_numbers_1 = []
+    random_numbers_2 = []
+    data_for_excel_1 = []
+    data_for_excel_2 = []
+    data_for_condition_1 = []
+    data_for_condition_2 = []
+    car_start_time = None
+    best_time = None
+    running = False
+    use_random_org = True
 
-        entropy_1 = calculate_entropy(random_bits_1)
-        entropy_2 = calculate_entropy(random_bits_2)
-
-        st.write(f"Entropia Condizione 1: {entropy_1}")
-        st.write(f"Entropia Condizione 2: {entropy_2}")
-
-        # Muovi le auto
-        car1_moves = 0
-        car2_moves = 0
-
-        for entropy_score_1 in random_bits_1:
-            if entropy_score_1 < 0.5:
-                car_x += 1
+    if start_button:
+        running = True
+        car_start_time = time.time()
+        
+        while running:
+            random_bits_1 = get_random_bits_from_random_org(5000)
+            random_bits_2 = get_random_bits_from_random_org(5000)
+            
+            random_numbers_1.extend(random_bits_1)
+            random_numbers_2.extend(random_bits_2)
+            
+            data_for_excel_1.append(random_bits_1)
+            data_for_excel_2.append(random_bits_2)
+            
+            entropy_score_1 = calculate_entropy(random_bits_1)
+            entropy_score_2 = calculate_entropy(random_bits_2)
+            
+            data_for_condition_1.append(entropy_score_1)
+            data_for_condition_2.append(entropy_score_2)
+            
+            percentile_5_1 = np.percentile(data_for_condition_1, 5)
+            percentile_5_2 = np.percentile(data_for_condition_2, 5)
+            
+            if entropy_score_1 < percentile_5_1:
+                rarity_percentile = 1 - (entropy_score_1 / percentile_5_1)
+                car_pos = move_car(car_pos, 6 * (1 + (10 * rarity_percentile)))
                 car1_moves += 1
-
-        for entropy_score_2 in random_bits_2:
-            if entropy_score_2 < 0.5:
-                car2_x += 1
+            
+            if entropy_score_2 < percentile_5_2:
+                rarity_percentile = 1 - (entropy_score_2 / percentile_5_2)
+                car2_pos = move_car(car2_pos, 6 * (1 + (10 * rarity_percentile)))
                 car2_moves += 1
+            
+            car_image = Image.open("car.png").resize((70, 70))
+            car2_image = Image.open("car2.png").resize((70, 70))
+            
+            st.image(car_image, caption="Auto Verde", width=70)
+            st.progress(int(car_pos / 10))
+            st.image(car2_image, caption="Auto Rossa", width=70)
+            st.progress(int(car2_pos / 10))
+            
+            time.sleep(0.1)
 
-        # Mostra le posizioni finali delle auto
-        st.write(f"Posizione finale Auto Verde: {car_x}")
-        st.write(f"Posizione finale Auto Rossa: {car2_x}")
+            if stop_button:
+                running = False
+                break
+        
+        end_time = time.time()
+        time_taken = end_time - car_start_time
+        st.write(f"Tempo impiegato: {time_taken:.2f} secondi")
+        if best_time is None or time_taken < best_time:
+            best_time = time_taken
+            st.success(f"Nuovo Record! Tempo: {time_taken:.2f} secondi")
+        else:
+            st.info(f"Tempo impiegato: {time_taken:.2f} secondi")
 
-        # Mostra l'animazione delle auto
-        fig, ax = plt.subplots(figsize=(10, 2))
-        ax.plot([0, car_x], [1, 1], color='green', linewidth=10)
-        ax.plot([0, car2_x], [0.5, 0.5], color='red', linewidth=10)
-        ax.set_xlim(0, 100)
-        ax.set_ylim(0, 1.5)
-        ax.axis('off')
-        st.pyplot(fig)
-
-        # Analisi statistiche
-        u_stat, p_value_mw = mannwhitneyu(random_bits_1, random_bits_2, alternative='two-sided')
-        st.write(f"Mann-Whitney U test: U-stat = {u_stat:.4f}, p-value = {p_value_mw:.4f}")
-
-        total_moves_1 = sum(random_bits_1)
-        total_moves_2 = sum(random_bits_2)
-        binom_p_value_moves = binomtest(total_moves_1, num_bits//2, alternative='two-sided').pvalue
-        st.write(f"Test Binomiale (numero di spostamenti): p-value = {binom_p_value_moves:.4f}")
-
-        binom_p_value_1 = binomtest(np.sum(random_bits_1), len(random_bits_1), alternative='two-sided').pvalue
-        st.write(f"Test Binomiale (cifre auto verde): p-value = {binom_p_value_1:.4f}")
-
-        binom_p_value_2 = binomtest(np.sum(random_bits_2), len(random_bits_2), alternative='two-sided').pvalue
-        st.write(f"Test Binomiale (cifre auto rossa): p-value = {binom_p_value_2:.4f}")
-
-        # Scarica i dati
+    if download_button:
         df = pd.DataFrame({
-            "Condizione 1": random_bits_1,
-            "Condizione 2": random_bits_2
+            "Condizione 1": [''.join(map(str, row)) for row in data_for_excel_1],
+            "Condizione 2": [''.join(map(str, row)) for row in data_for_excel_2]
         })
-
-        csv = df.to_csv(index=False)
-        st.download_button(
-            label="Scarica Dati",
-            data=csv,
-            file_name='random_numbers.csv',
-            mime='text/csv',
-        )
-
-        # Grafico della distribuzione della rarità
+        df.to_excel("random_numbers.xlsx", index=False)
+        st.success("Dati salvati in random_numbers.xlsx")
+    
+    if download_graph_button:
         fig, ax = plt.subplots(figsize=(8, 4))
-        ax.hist(df["Condizione 1"], bins=30, alpha=0.5, color='red', edgecolor='k', label='Condizione 1')
-        ax.hist(df["Condizione 2"], bins=30, alpha=0.5, color='green', edgecolor='k', label='Condizione 2')
+        ax.hist(data_for_condition_1, bins=30, alpha=0.5, color='red', edgecolor='k')
+        ax.hist(data_for_condition_2, bins=30, alpha=0.5, color='green', edgecolor='k')
         ax.set_title('Distribuzione della Rarità degli Slot')
         ax.set_xlabel('Rarità')
         ax.set_ylabel('Frequenza')
-        ax.legend()
-        st.pyplot(fig)
         buf = io.BytesIO()
         fig.savefig(buf, format='png')
         buf.seek(0)
-        st.download_button(
-            label="Scarica Grafico",
-            data=buf,
-            file_name='rarity_distribution.png',
-            mime='image/png',
-        )
+        st.download_button(label="Scarica Grafico", data=buf, file_name="rarity_distribution.png", mime="image/png")
+    
+    if stats_button:
+        if data_for_condition_1 and data_for_condition_2:
+            u_stat, p_value = mannwhitneyu(data_for_condition_1, data_for_condition_2, alternative='two-sided')
+            mann_whitney_text = f"Mann-Whitney U test: U-stat = {u_stat:.4f}, p-value = {p_value:.4f}"
+        else:
+            mann_whitney_text = "Mann-Whitney U test: Dati insufficienti"
+
+        total_moves = car1_moves + car2_moves
+        if total_moves > 0:
+            binom_p_value_moves = binomtest(car1_moves, total_moves, alternative='two-sided').pvalue
+            binom_text_moves = f"Test Binomiale (numero di spostamenti): p-value = {binom_p_value_moves:.4f}"
+        else:
+            binom_p_value_moves = 1.0
+            binom_text_moves = "Test Binomiale (numero di spostamenti): Dati insufficienti"
+
+        binom_p_value_1 = binomtest(np.sum(random_numbers_1), len(random_numbers_1), alternative='two-sided').pvalue
+        binom_text_1 = f"Test Binomiale (cifre auto verde): p-value = {binom_p_value_1:.4f}"
+
+        binom_p_value_2 = binomtest(np.sum(random_numbers_2), len(random_numbers_2), alternative='two-sided').pvalue
+        binom_text_2 = f"Test Binomiale (cifre auto rossa): p-value = {binom_p_value_2:.4f}"
+
+        stats_text = mann_whitney_text + "\n" + binom_text_moves + "\n" + binom_text_1 + "\n" + binom_text_2
+        st.write(stats_text)
+    
+    if reset_button:
+        car_pos = 50
+        car2_pos = 50
+        car1_moves = 0
+        car2_moves = 0
+        data_for_excel_1 = []
+        data_for_excel_2 = []
+        data_for_condition_1 = []
+        data_for_condition_2 = []
+        random_numbers_1 = []
+        random_numbers_2 = []
+        st.write("Gioco resettato!")
+
+if __name__ == "__main__":
+    main()
+

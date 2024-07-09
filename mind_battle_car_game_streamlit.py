@@ -2,8 +2,6 @@ import streamlit as st
 import requests
 import pandas as pd
 import numpy as np
-import serial
-import serial.tools.list_ports
 from scipy.stats import mannwhitneyu, binomtest
 import matplotlib.pyplot as plt
 
@@ -23,14 +21,6 @@ def get_random_bits_from_random_org(num_bits):
     random_bits = list(map(int, response.text.strip().split()))
     return random_bits
 
-# Funzione per ottenere i bit casuali dalla chiavetta TrueRNG3
-def get_random_bits_from_truerng(num_bits, port):
-    ser = serial.Serial(port, 9600, timeout=1)
-    random_bytes = ser.read(num_bits // 8)
-    ser.close()
-    random_bits = [int(bit) for byte in random_bytes for bit in format(byte, '08b')]
-    return random_bits
-
 # Funzione per calcolare l'entropia
 def calculate_entropy(bits):
     n = len(bits)
@@ -40,22 +30,36 @@ def calculate_entropy(bits):
     entropy = -np.sum(p * np.log2(p))
     return entropy
 
-# Funzione per elencare le porte seriali
-def list_serial_ports():
-    return [port.device for port in serial.tools.list_ports.comports()]
-
 st.title("Generatore di Anomalie Casuali Binari")
 
 num_bits = 10000
-use_truerng = False
 
-# Controlla se la chiavetta TrueRNG3 è disponibile
-ports = list_serial_ports()
-if ports:
-    use_truerng = True
-    true_rng_port = ports[0]
-    st.warning("Chiavetta TrueRNG3 rilevata. Verrà utilizzata per generare i numeri casuali.")
-else:
+# Controlla se siamo in un ambiente locale o su Streamlit Cloud
+try:
+    import serial
+    import serial.tools.list_ports
+
+    def list_serial_ports():
+        return [port.device for port in serial.tools.list_ports.comports()]
+
+    def get_random_bits_from_truerng(num_bits, port):
+        ser = serial.Serial(port, 9600, timeout=1)
+        random_bytes = ser.read(num_bits // 8)
+        ser.close()
+        random_bits = [int(bit) for byte in random_bytes for bit in format(byte, '08b')]
+        return random_bits
+
+    ports = list_serial_ports()
+    if ports:
+        use_truerng = True
+        true_rng_port = ports[0]
+        st.warning("Chiavetta TrueRNG3 rilevata. Verrà utilizzata per generare i numeri casuali.")
+    else:
+        use_truerng = False
+        st.warning("Attenzione! Non è stata rilevata la chiavetta 'TrueRNG3' indispensabile per il compito.\nVerrà quindi utilizzato random.org per generare i numeri casuali.")
+
+except ModuleNotFoundError:
+    use_truerng = False
     st.warning("Attenzione! Non è stata rilevata la chiavetta 'TrueRNG3' indispensabile per il compito.\nVerrà quindi utilizzato random.org per generare i numeri casuali.")
 
 if st.button("Avvia Generazione"):

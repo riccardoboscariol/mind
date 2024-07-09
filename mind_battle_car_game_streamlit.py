@@ -5,6 +5,8 @@ import pandas as pd
 import requests
 import io
 from PIL import Image
+from scipy.stats import mannwhitneyu, binomtest
+import matplotlib.pyplot as plt
 
 # Funzioni per ottenere bit casuali da random.org
 def get_random_bits_from_random_org(num_bits):
@@ -64,6 +66,11 @@ def main():
     running = False
     use_random_org = True
 
+    car_placeholder = st.empty()
+    car2_placeholder = st.empty()
+    car_progress = st.empty()
+    car2_progress = st.empty()
+
     if start_button:
         running = True
         car_start_time = time.time()
@@ -100,10 +107,10 @@ def main():
             car_image = Image.open("car.png").resize((70, 70))
             car2_image = Image.open("car2.png").resize((70, 70))
             
-            st.image(car_image, caption="Auto Verde", width=70)
-            st.progress(int(car_pos / 10))
-            st.image(car2_image, caption="Auto Rossa", width=70)
-            st.progress(int(car2_pos / 10))
+            car_placeholder.image(car_image, caption="Auto Verde", width=70)
+            car_progress.progress(int(car_pos / 10))
+            car2_placeholder.image(car2_image, caption="Auto Rossa", width=70)
+            car2_progress.progress(int(car2_pos / 10))
             
             time.sleep(0.1)
 

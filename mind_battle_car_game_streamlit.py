@@ -60,6 +60,10 @@ try:
 except ModuleNotFoundError:
     st.warning("Attenzione! Non è stata rilevata la chiavetta 'TrueRNG3' indispensabile per il compito.\nVerrà quindi utilizzato random.org per generare i numeri casuali.")
 
+# Posizione iniziale delle auto
+car_x = 0
+car2_x = 0
+
 if st.button("Avvia Generazione"):
     if use_truerng:
         random_bits = get_random_bits_from_truerng(num_bits, true_rng_port)
@@ -75,6 +79,34 @@ if st.button("Avvia Generazione"):
     st.write(f"Entropia Condizione 1: {entropy_1}")
     st.write(f"Entropia Condizione 2: {entropy_2}")
 
+    # Muovi le auto
+    car1_moves = 0
+    car2_moves = 0
+
+    for entropy_score_1 in random_bits_1:
+        if entropy_score_1 < 0.5:
+            car_x += 1
+            car1_moves += 1
+
+    for entropy_score_2 in random_bits_2:
+        if entropy_score_2 < 0.5:
+            car2_x += 1
+            car2_moves += 1
+
+    # Mostra le posizioni finali delle auto
+    st.write(f"Posizione finale Auto Verde: {car_x}")
+    st.write(f"Posizione finale Auto Rossa: {car2_x}")
+
+    # Mostra l'animazione delle auto
+    fig, ax = plt.subplots(figsize=(10, 2))
+    ax.plot([0, car_x], [1, 1], color='green', linewidth=10)
+    ax.plot([0, car2_x], [0.5, 0.5], color='red', linewidth=10)
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 1.5)
+    ax.axis('off')
+    st.pyplot(fig)
+
+    # Analisi statistiche
     u_stat, p_value_mw = mannwhitneyu(random_bits_1, random_bits_2, alternative='two-sided')
     st.write(f"Mann-Whitney U test: U-stat = {u_stat:.4f}, p-value = {p_value_mw:.4f}")
 
@@ -89,9 +121,7 @@ if st.button("Avvia Generazione"):
     binom_p_value_2 = binomtest(np.sum(random_bits_2), len(random_bits_2), alternative='two-sided').pvalue
     st.write(f"Test Binomiale (cifre auto rossa): p-value = {binom_p_value_2:.4f}")
 
-    st.write(f"Posizione Auto Verde: {total_moves_1 / 100.0}")
-    st.write(f"Posizione Auto Rossa: {total_moves_2 / 100.0}")
-
+    # Scarica i dati
     df = pd.DataFrame({
         "Condizione 1": random_bits_1,
         "Condizione 2": random_bits_2
@@ -105,6 +135,7 @@ if st.button("Avvia Generazione"):
         mime='text/csv',
     )
 
+    # Grafico della distribuzione della rarità
     fig, ax = plt.subplots(figsize=(8, 4))
     ax.hist(df["Condizione 1"], bins=30, alpha=0.5, color='red', edgecolor='k', label='Condizione 1')
     ax.hist(df["Condizione 2"], bins=30, alpha=0.5, color='green', edgecolor='k', label='Condizione 2')
@@ -113,4 +144,12 @@ if st.button("Avvia Generazione"):
     ax.set_ylabel('Frequenza')
     ax.legend()
     st.pyplot(fig)
-
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    buf.seek(0)
+    st.download_button(
+        label="Scarica Grafico",
+        data=buf,
+        file_name='rarity_distribution.png',
+        mime='image/png',
+    )

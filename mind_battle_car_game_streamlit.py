@@ -34,7 +34,7 @@ st.title("Generatore di Anomalie Casuali Binari")
 
 num_bits = 10000
 
-# Controlla se siamo in un ambiente locale o su Streamlit Cloud
+use_truerng = False
 try:
     import serial
     import serial.tools.list_ports
@@ -55,11 +55,9 @@ try:
         true_rng_port = ports[0]
         st.warning("Chiavetta TrueRNG3 rilevata. Verrà utilizzata per generare i numeri casuali.")
     else:
-        use_truerng = False
         st.warning("Attenzione! Non è stata rilevata la chiavetta 'TrueRNG3' indispensabile per il compito.\nVerrà quindi utilizzato random.org per generare i numeri casuali.")
 
 except ModuleNotFoundError:
-    use_truerng = False
     st.warning("Attenzione! Non è stata rilevata la chiavetta 'TrueRNG3' indispensabile per il compito.\nVerrà quindi utilizzato random.org per generare i numeri casuali.")
 
 if st.button("Avvia Generazione"):
@@ -115,3 +113,4 @@ if st.button("Avvia Generazione"):
     ax.set_ylabel('Frequenza')
     ax.legend()
     st.pyplot(fig)
+

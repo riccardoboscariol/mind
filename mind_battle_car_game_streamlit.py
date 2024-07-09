@@ -20,9 +20,14 @@ def get_random_bits_from_random_org(num_bits):
         "format": "plain",
         "rnd": "new"
     }
-    response = requests.get(url, params=params)
-    random_bits = list(map(int, response.text.strip().split()))
-    return random_bits
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        random_bits = list(map(int, response.text.strip().split()))
+        return random_bits
+    except requests.RequestException as e:
+        st.error(f"Errore durante l'accesso a random.org: {e}")
+        return [0] * num_bits  # Fallback a una lista di zeri
 
 # Funzione per calcolare l'entropia
 def calculate_entropy(bits):
@@ -76,8 +81,8 @@ def main():
         car_start_time = time.time()
         
         while running:
-            random_bits_1 = get_random_bits_from_random_org(5000)
-            random_bits_2 = get_random_bits_from_random_org(5000)
+            random_bits_1 = get_random_bits_from_random_org(1000)
+            random_bits_2 = get_random_bits_from_random_org(1000)
             
             random_numbers_1.extend(random_bits_1)
             random_numbers_2.extend(random_bits_2)

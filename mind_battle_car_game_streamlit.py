@@ -22,12 +22,16 @@ def get_random_bits_from_random_org(num_bits):
         "rnd": "new"
     }
     response = requests.get(url, params=params)
-    try:
-        random_bits = list(map(int, response.text.strip().split()))
-        if len(random_bits) != num_bits:
-            raise ValueError("Number of bits received does not match the requested number.")
-    except Exception as e:
-        st.error(f"Errore durante l'ottenimento dei bit casuali da random.org: {e}")
+    if response.status_code == 200:
+        try:
+            random_bits = list(map(int, response.text.strip().split()))
+            if len(random_bits) != num_bits:
+                raise ValueError("Number of bits received does not match the requested number.")
+        except Exception as e:
+            st.error(f"Errore durante l'ottenimento dei bit casuali da random.org: {e}")
+            random_bits = []
+    else:
+        st.error(f"Errore durante l'ottenimento dei bit casuali da random.org: {response.text}")
         random_bits = []
     return random_bits
 

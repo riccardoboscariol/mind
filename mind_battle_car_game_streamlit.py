@@ -26,7 +26,9 @@ def get_random_bits_from_random_org(num_bits):
         random_bits = list(map(int, response.text.strip().split()))
         return random_bits
     except requests.RequestException as e:
-        st.warning("Errore durante l'accesso a random.org: {}. Utilizzando la generazione locale.".format(e))
+        if not st.session_state.get('random_org_warning_shown', False):
+            st.session_state['random_org_warning_shown'] = True
+            st.warning("Errore durante l'accesso a random.org: {}. Utilizzando la generazione locale.".format(e))
         return get_random_bits(num_bits)
 
 # Funzione per ottenere bit casuali localmente
@@ -209,6 +211,8 @@ def main():
         random_numbers_1 = []
         random_numbers_2 = []
         st.write("Gioco resettato!")
+        st.session_state['random_org_warning_shown'] = False  # Reset dell'avviso di errore per random.org
 
 if __name__ == "__main__":
     main()
+

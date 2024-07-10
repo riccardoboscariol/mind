@@ -55,16 +55,11 @@ def main():
     # CSS per personalizzare i colori degli slider
     st.markdown("""
         <style>
-        .streamlit-slider {
-            color: red;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
-    st.markdown("""
-        <style>
-        .stSlider > div > div > div > div > div:nth-child(2) > div {
+        .stSlider > div > div > div > div > div {
             background: red;
+        }
+        .stSlider > div > div > div > div > div:nth-child(2) {
+            background: green;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -102,6 +97,11 @@ def main():
         st.session_state.best_time = None
     if "running" not in st.session_state:
         st.session_state.running = False
+
+    car_placeholder = st.empty()
+    car2_placeholder = st.empty()
+    car_progress = st.empty()
+    car2_progress = st.empty()
 
     widget_key_counter = 0
 

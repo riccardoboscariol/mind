@@ -8,6 +8,7 @@ import threading
 import time
 import serial
 import serial.tools.list_ports
+import io
 
 # Costante per il numero massimo di bit per richiesta
 MAX_BITS_PER_REQUEST = 10000
@@ -124,7 +125,7 @@ def read_random_numbers_locally_continuously(sub_block_size, random_numbers):
         random_bits_2 = random_bits[sub_block_size:]
 
         random_numbers['1'].extend(random_bits_1)
-        random_numbers['2'].extend(random_bits_2)
+        random_numbers['2'].extend(random_bits_2]
 
         update_positions(random_bits_1, random_bits_2)
         time.sleep(1)
@@ -142,6 +143,22 @@ def update_positions(bits1, bits2):
     if st.session_state.car_positions['car2'] > 1000:
         st.session_state.car_positions['car2'] = 1000
 
+    # Aggiornamento automatico della visualizzazione
+    update_plot()
+
+def update_plot():
+    fig, ax = plt.subplots()
+    ax.plot([st.session_state.car_positions['car1']], [1], 'go', label='Auto Verde')
+    ax.plot([st.session_state.car_positions['car2']], [2], 'ro', label='Auto Rossa')
+    ax.set_yticks([1, 2])
+    ax.set_yticklabels(['Auto Verde', 'Auto Rossa'])
+    ax.set_xlim([0, 1000])
+    ax.set_ylim([0, 3])
+    ax.legend()
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    buf.seek(0)
+    st.session_state.plot_image = buf.getvalue()
     st.experimental_rerun()
 
 # Inizializza lo stato della sessione
@@ -149,6 +166,8 @@ if 'car_positions' not in st.session_state:
     st.session_state.car_positions = {'car1': 0, 'car2': 0}
 if 'random_numbers' not in st.session_state:
     st.session_state.random_numbers = {'1': [], '2': []}
+if 'plot_image' not in st.session_state:
+    st.session_state.plot_image = None
 
 # Imposta l'interfaccia Streamlit
 st.title("Mind Battle Car Game")
@@ -176,18 +195,11 @@ if st.button("Scarica Dati"):
     st.success("I dati sono stati scaricati come CSV")
 
 # Visualizzazione delle posizioni delle auto
+if st.session_state.plot_image:
+    st.image(st.session_state.plot_image, use_column_width=True)
+
 st.write(f"Posizione Auto Verde: {st.session_state.car_positions['car1']}")
 st.write(f"Posizione Auto Rossa: {st.session_state.car_positions['car2']}")
-
-fig, ax = plt.subplots()
-ax.plot([st.session_state.car_positions['car1']], [1], 'go', label='Auto Verde')
-ax.plot([st.session_state.car_positions['car2']], [2], 'ro', label='Auto Rossa')
-ax.set_yticks([1, 2])
-ax.set_yticklabels(['Auto Verde', 'Auto Rossa'])
-ax.set_xlim([0, 1000])
-ax.set_ylim([0, 3])
-ax.legend()
-st.pyplot(fig)
 
 # Visualizzazione delle statistiche
 if st.session_state.random_numbers['1'] and st.session_state.random_numbers['2']:

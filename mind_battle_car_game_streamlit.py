@@ -9,31 +9,46 @@ import time
 import serial
 import serial.tools.list_ports
 
-# Funzione per ottenere i bit casuali da random.org
+# Costante per il numero massimo di bit per richiesta
+MAX_BITS_PER_REQUEST = 10000
+
+# Funzione per ottenere i bit casuali da random.org con gestione dei limiti
 def get_random_bits_from_random_org(num_bits):
-    url = "https://www.random.org/integers/"
-    params = {
-        "num": num_bits,
-        "min": 0,
-        "max": 1,
-        "col": 1,
-        "base": 10,
-        "format": "plain",
-        "rnd": "new"
-    }
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
-        try:
-            random_bits = list(map(int, response.text.strip().split()))
-            if len(random_bits) != num_bits:
-                raise ValueError("Number of bits received does not match the requested number.")
-        except Exception as e:
-            st.error(f"Errore durante l'ottenimento dei bit casuali da random.org: {e}")
-            random_bits = []
-    else:
-        st.error(f"Errore durante l'ottenimento dei bit casuali da random.org: {response.text}")
-        random_bits = []
+    random_bits = []
+    try:
+        while num_bits > 0:
+            bits_to_request = min(num_bits, MAX_BITS_PER_REQUEST)
+            url = "https://www.random.org/integers/"
+            params = {
+                "num": bits_to_request,
+                "min": 0,
+                "max": 1,
+                "col": 1,
+                "base": 10,
+                "format": "plain",
+                "rnd": "new"
+            }
+            response = requests.get(url, params=params)
+            if response.status_code == 200:
+                try:
+                    random_bits_chunk = list(map(int, response.text.strip().split()))
+                    if len(random_bits_chunk) != bits_to_request:
+                        raise ValueError("Number of bits received does not match the requested number.")
+                    random_bits.extend(random_bits_chunk)
+                    num_bits -= bits_to_request
+                except Exception as e:
+                    st.error(f"Errore durante l'ottenimento dei bit casuali da random.org: {e}")
+                    break
+            else:
+                st.warning(f"Errore durante l'ottenimento dei bit casuali da random.org: {response.text}")
+                break
+    except Exception as e:
+        st.error(f"Errore durante l'ottenimento dei bit casuali da random.org: {e}")
     return random_bits
+
+# Funzione per ottenere i bit casuali localmente
+def get_random_bits_locally(num_bits):
+    return np.random.randint(0, 2, size=num_bits).tolist()
 
 # Funzione per calcolare l'entropia
 def calculate_entropy(bits):
@@ -66,8 +81,8 @@ def start_reading():
     if not running:
         ports = list_serial_ports()
         if not ports:
-            st.warning("Nessuna porta seriale trovata, utilizzerò random.org per generare i numeri casuali.")
-            generate_random_numbers_from_random_org()
+            st.warning("Nessuna porta seriale trovata, utilizzerò un generatore locale per generare i numeri casuali.")
+            generate_random_numbers_locally()
             return
 
         # Assumi che la prima porta sia TrueRNG
@@ -110,16 +125,27 @@ def read_random_numbers_from_truerng():
             running = False
             break
 
-# Funzione per generare numeri casuali da random.org
-def generate_random_numbers_from_random_org():
+# Funzione per generare numeri casuali da random.org o localmente
+def generate_random_numbers():
     global random_numbers_1, random_numbers_2
     random_bits = get_random_bits_from_random_org(num_bits)
-    if random_bits:
-        random_bits_1 = random_bits[:num_bits//2]
-        random_bits_2 = random_bits[num_bits//2:]
+    if not random_bits:
+        random_bits = get_random_bits_locally(num_bits)
+    random_bits_1 = random_bits[:num_bits//2]
+    random_bits_2 = random_bits[num_bits//2:]
 
-        random_numbers_1.extend(random_bits_1)
-        random_numbers_2.extend(random_bits_2)
+    random_numbers_1.extend(random_bits_1)
+    random_numbers_2.extend(random_bits_2)
+
+# Funzione per generare numeri casuali localmente
+def generate_random_numbers_locally():
+    global random_numbers_1, random_numbers_2
+    random_bits = get_random_bits_locally(num_bits)
+    random_bits_1 = random_bits[:num_bits//2]
+    random_bits_2 = random_bits[num_bits//2:]
+
+    random_numbers_1.extend(random_bits_1)
+    random_numbers_2.extend(random_bits_2)
 
 # Funzione per il download dei dati
 def download_data():

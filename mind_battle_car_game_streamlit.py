@@ -100,6 +100,8 @@ def main():
         st.session_state.best_time = None
     if "running" not in st.session_state:
         st.session_state.running = False
+    if "widget_key_counter" not in st.session_state:
+        st.session_state.widget_key_counter = 0
 
     car_placeholder = st.empty()
     car2_placeholder = st.empty()
@@ -118,40 +120,40 @@ def main():
     if stop_button:
         st.session_state.running = False
 
-    if st.session_state.running:
-        while st.session_state.running:
-            random_bits_1 = get_random_bits_from_random_org(5000)
-            random_bits_2 = get_random_bits_from_random_org(5000)
-            
-            st.session_state.random_numbers_1.extend(random_bits_1)
-            st.session_state.random_numbers_2.extend(random_bits_2)
-            
-            st.session_state.data_for_excel_1.append(random_bits_1)
-            st.session_state.data_for_excel_2.append(random_bits_2)
-            
-            entropy_score_1 = calculate_entropy(random_bits_1)
-            entropy_score_2 = calculate_entropy(random_bits_2)
-            
-            st.session_state.data_for_condition_1.append(entropy_score_1)
-            st.session_state.data_for_condition_2.append(entropy_score_2)
-            
-            percentile_5_1 = np.percentile(st.session_state.data_for_condition_1, 5)
-            percentile_5_2 = np.percentile(st.session_state.data_for_condition_2, 5)
-            
-            if entropy_score_1 < percentile_5_1:
-                rarity_percentile = 1 - (entropy_score_1 / percentile_5_1)
-                st.session_state.car_pos = move_car(st.session_state.car_pos, 6 * (1 + (10 * rarity_percentile)))
-                st.session_state.car1_moves += 1
-            
-            if entropy_score_2 < percentile_5_2:
-                rarity_percentile = 1 - (entropy_score_2 / percentile_5_2)
-                st.session_state.car2_pos = move_car(st.session_state.car2_pos, 6 * (1 + (10 * rarity_percentile)))
-                st.session_state.car2_moves += 1
-            
-            car_progress.slider("Posizione Auto Rossa", min_value=0, max_value=1000, value=int(st.session_state.car_pos), key="slider1")
-            car2_progress.slider("Posizione Auto Verde", min_value=0, max_value=1000, value=int(st.session_state.car2_pos), key="slider2")
+    while st.session_state.running:
+        random_bits_1 = get_random_bits_from_random_org(5000)
+        random_bits_2 = get_random_bits_from_random_org(5000)
+        
+        st.session_state.random_numbers_1.extend(random_bits_1)
+        st.session_state.random_numbers_2.extend(random_bits_2)
+        
+        st.session_state.data_for_excel_1.append(random_bits_1)
+        st.session_state.data_for_excel_2.append(random_bits_2)
+        
+        entropy_score_1 = calculate_entropy(random_bits_1)
+        entropy_score_2 = calculate_entropy(random_bits_2)
+        
+        st.session_state.data_for_condition_1.append(entropy_score_1)
+        st.session_state.data_for_condition_2.append(entropy_score_2)
+        
+        percentile_5_1 = np.percentile(st.session_state.data_for_condition_1, 5)
+        percentile_5_2 = np.percentile(st.session_state.data_for_condition_2, 5)
+        
+        if entropy_score_1 < percentile_5_1:
+            rarity_percentile = 1 - (entropy_score_1 / percentile_5_1)
+            st.session_state.car_pos = move_car(st.session_state.car_pos, 6 * (1 + (10 * rarity_percentile)))
+            st.session_state.car1_moves += 1
+        
+        if entropy_score_2 < percentile_5_2:
+            rarity_percentile = 1 - (entropy_score_2 / percentile_5_2)
+            st.session_state.car2_pos = move_car(st.session_state.car2_pos, 6 * (1 + (10 * rarity_percentile)))
+            st.session_state.car2_moves += 1
+        
+        st.session_state.widget_key_counter += 1  # Incrementa il contatore per ogni iterazione
+        car_progress.slider("Posizione Auto Rossa", min_value=0, max_value=1000, value=int(st.session_state.car_pos), key=f"slider1_{st.session_state.widget_key_counter}")
+        car2_progress.slider("Posizione Auto Verde", min_value=0, max_value=1000, value=int(st.session_state.car2_pos), key=f"slider2_{st.session_state.widget_key_counter}")
 
-            time.sleep(0.1)
+        time.sleep(0.1)
 
     if download_button:
         df = pd.DataFrame({
@@ -224,6 +226,7 @@ def main():
         st.session_state.data_for_condition_2 = []
         st.session_state.random_numbers_1 = []
         st.session_state.random_numbers_2 = []
+        st.session_state.widget_key_counter = 0  # Reset del contatore di chiavi
         st.write("Gioco resettato!")
         st.session_state['random_org_warning_shown'] = False  # Reset dell'avviso di errore per random.org
 

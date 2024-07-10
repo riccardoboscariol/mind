@@ -4,8 +4,8 @@ import pandas as pd
 import numpy as np
 from scipy.stats import mannwhitneyu, binomtest
 import matplotlib.pyplot as plt
-import threading
 import time
+import threading
 import serial
 import serial.tools.list_ports
 import io
@@ -206,6 +206,7 @@ if st.button("Scarica Dati"):
 # Visualizzazione delle posizioni delle auto
 image_placeholder = st.empty()
 
+# Loop per aggiornare l'immagine
 while running:
     if st.session_state.plot_image:
         image_placeholder.image(st.session_state.plot_image, use_column_width=True)

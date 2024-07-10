@@ -96,7 +96,7 @@ def read_random_numbers_from_truerng_continuously(ser, sub_block_size, random_nu
         random_numbers['2'].extend(random_bits_2)
 
         update_positions(random_bits_1, random_bits_2)
-        time.sleep(1)
+        time.sleep(0.1)
 
 # Funzione per leggere i numeri casuali da random.org in modo continuo
 def read_random_numbers_from_random_org_continuously(sub_block_size, random_numbers):
@@ -112,7 +112,7 @@ def read_random_numbers_from_random_org_continuously(sub_block_size, random_numb
         random_numbers['2'].extend(random_bits_2)
 
         update_positions(random_bits_1, random_bits_2)
-        time.sleep(1)
+        time.sleep(0.1)
 
 # Funzione per leggere i numeri casuali localmente in modo continuo
 def read_random_numbers_locally_continuously(sub_block_size, random_numbers):
@@ -126,7 +126,7 @@ def read_random_numbers_locally_continuously(sub_block_size, random_numbers):
         random_numbers['2'].extend(random_bits_2)
 
         update_positions(random_bits_1, random_bits_2)
-        time.sleep(1)
+        time.sleep(0.1)
 
 # Funzione per aggiornare le posizioni delle auto
 def update_positions(bits1, bits2):

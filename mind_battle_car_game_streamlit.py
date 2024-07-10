@@ -74,6 +74,11 @@ def main():
     best_time = None
     running = False
 
+    car_placeholder = st.empty()
+    car2_placeholder = st.empty()
+    car_progress = st.empty()
+    car2_progress = st.empty()
+
     if start_button:
         running = True
         car_start_time = time.time()
@@ -107,10 +112,13 @@ def main():
                 car2_pos = move_car(car2_pos, 6 * (1 + (10 * rarity_percentile)))
                 car2_moves += 1
             
-            st.image("car.png", width=70)
-            st.slider("Posizione Auto Rossa", min_value=0, max_value=1000, value=int(car_pos))
-            st.image("car2.png", width=70)
-            st.slider("Posizione Auto Verde", min_value=0, max_value=1000, value=int(car2_pos))
+            car_image = Image.open("car.png").resize((70, 70))
+            car2_image = Image.open("car2.png").resize((70, 70))
+            
+            car_placeholder.image(car_image, caption="Auto Rossa", width=70)
+            car_progress.progress(int(car_pos / 10))
+            car2_placeholder.image(car2_image, caption="Auto Verde", width=70)
+            car2_progress.progress(int(car2_pos / 10))
             
             time.sleep(0.1)
 
@@ -186,3 +194,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

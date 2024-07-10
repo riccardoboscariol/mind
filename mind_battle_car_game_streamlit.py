@@ -144,15 +144,18 @@ def main():
             "Condizione 1": [''.join(map(str, row)) for row in data_for_excel_1],
             "Condizione 2": [''.join(map(str, row)) for row in data_for_excel_2]
         })
-        df.to_excel("random_numbers.xlsx", index=False)
-        with open("random_numbers.xlsx", "rb") as file:
-            st.download_button(
-                label="Scarica Dati",
-                data=file,
-                file_name="random_numbers.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-    
+        try:
+            df.to_excel("random_numbers.xlsx", index=False)
+            with open("random_numbers.xlsx", "rb") as file:
+                st.download_button(
+                    label="Scarica Dati",
+                    data=file,
+                    file_name="random_numbers.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+        except ImportError:
+            st.error("openpyxl non è installato. Installa openpyxl per scaricare i dati in formato Excel.")
+
     if download_graph_button:
         fig, ax = plt.subplots(figsize=(8, 4))
         ax.hist(data_for_condition_1, bins=30, alpha=0.5, color='red', edgecolor='k')
@@ -209,4 +212,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 

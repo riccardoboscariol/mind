@@ -32,6 +32,10 @@ def get_random_bits_from_random_org(num_bits):
             st.warning("Errore durante l'accesso a random.org: {}. Utilizzando la generazione locale.".format(e))
         return np.random.randint(0, 2, num_bits).tolist()
 
+# Funzione per ottenere bit casuali localmente
+def get_random_bits(num_bits):
+    return np.random.randint(0, 2, num_bits).tolist()
+
 # Funzione per calcolare l'entropia
 def calculate_entropy(bits):
     n = len(bits)
@@ -151,7 +155,8 @@ def main():
         car2_placeholder.image(car2_image, width=140)
         car2_progress.slider("Posizione Auto Verde", min_value=0, max_value=1000, value=int(st.session_state.car2_pos), key=f"slider2_{widget_key_counter}")
 
-        time.sleep(0.1)
+        # Aggiungi un ritardo per permettere all'interfaccia di aggiornarsi
+        time.sleep(0.5)
         st.experimental_rerun()
 
     if download_button:

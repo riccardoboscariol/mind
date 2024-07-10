@@ -112,13 +112,13 @@ def main():
                 car2_pos = move_car(car2_pos, 6 * (1 + (10 * rarity_percentile)))
                 car2_moves += 1
             
-            car_image = Image.open("car.png").resize((70, 70))
-            car2_image = Image.open("car2.png").resize((70, 70))
+            car_image = Image.open("car.png").resize((140, 140))
+            car2_image = Image.open("car2.png").resize((140, 140))
             
-            car_placeholder.image(car_image, caption="Auto Rossa", width=70)
-            car_progress.progress(int(car_pos / 10))
-            car2_placeholder.image(car2_image, caption="Auto Verde", width=70)
-            car2_progress.progress(int(car2_pos / 10))
+            car_placeholder.image(car_image, width=140)
+            car_progress.slider("Posizione Auto Rossa", min_value=0, max_value=1000, value=int(car_pos))
+            car2_placeholder.image(car2_image, width=140)
+            car2_progress.slider("Posizione Auto Verde", min_value=0, max_value=1000, value=int(car2_pos))
             
             time.sleep(0.1)
 
@@ -142,6 +142,13 @@ def main():
         })
         df.to_excel("random_numbers.xlsx", index=False)
         st.success("Dati salvati in random_numbers.xlsx")
+        with open("random_numbers.xlsx", "rb") as file:
+            st.download_button(
+                label="Scarica Dati",
+                data=file,
+                file_name="random_numbers.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
     
     if download_graph_button:
         fig, ax = plt.subplots(figsize=(8, 4))

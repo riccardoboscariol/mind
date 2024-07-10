@@ -65,6 +65,8 @@ num_bits = 10000
 random_numbers_1 = []
 random_numbers_2 = []
 sub_block_size = 5000
+car1_position = 0
+car2_position = 0
 
 # Variabili globali per la gestione dei thread e della seriale
 ser = None
@@ -93,7 +95,7 @@ def start_reading():
         ports = list_serial_ports()
         if not ports:
             st.warning("Nessuna porta seriale trovata, utilizzerò un generatore locale per generare i numeri casuali.")
-            generate_random_numbers_locally()
+            generate_random_numbers_continuously()
             return
 
         # Assumi che la prima porta sia TrueRNG
@@ -107,7 +109,7 @@ def start_reading():
             return
 
         running = True
-        reading_thread = threading.Thread(target=read_random_numbers_from_truerng)
+        reading_thread = threading.Thread(target=read_random_numbers_from_truerng_continuously)
         reading_thread.start()
 
 # Funzione per fermare la lettura dalla porta seriale
@@ -117,9 +119,9 @@ def stop_reading():
     if ser:
         ser.close()
 
-# Funzione per leggere i numeri casuali dalla porta seriale
-def read_random_numbers_from_truerng():
-    global running, ser, random_numbers_1, random_numbers_2
+# Funzione per leggere i numeri casuali dalla porta seriale in modo continuo
+def read_random_numbers_from_truerng_continuously():
+    global running, ser, random_numbers_1, random_numbers_2, car1_position, car2_position
     while running:
         try:
             random_bytes = ser.read(2 * sub_block_size // 8)  # Leggi i byte necessari per 10000 bit (1250 byte)
@@ -131,33 +133,55 @@ def read_random_numbers_from_truerng():
             random_numbers_1.extend(random_bits_1)
             random_numbers_2.extend(random_bits_2)
 
-            time.sleep(0.1)  # Pausa di 0.1 secondi
+            update_positions(random_bits_1, random_bits_2)
+
+            time.sleep(1)  # Pausa di 1 secondo
         except Exception as e:
             print(f"Errore durante la lettura: {str(e)}")
             running = False
             break
 
-# Funzione per generare numeri casuali da random.org o localmente
-def generate_random_numbers():
-    global random_numbers_1, random_numbers_2
-    random_bits = get_random_bits_from_random_org(num_bits)
-    if not random_bits:
-        random_bits = get_random_bits_locally(num_bits)
-    random_bits_1 = random_bits[:num_bits//2]
-    random_bits_2 = random_bits[num_bits//2:]
+# Funzione per generare numeri casuali da random.org o localmente in modo continuo
+def generate_random_numbers_continuously():
+    global random_numbers_1, random_numbers_2, car1_position, car2_position
+    while running:
+        random_bits = get_random_bits_from_random_org(num_bits)
+        if not random_bits:
+            random_bits = get_random_bits_locally(num_bits)
+        random_bits_1 = random_bits[:num_bits//2]
+        random_bits_2 = random_bits[num_bits//2:]
 
-    random_numbers_1.extend(random_bits_1)
-    random_numbers_2.extend(random_bits_2)
+        random_numbers_1.extend(random_bits_1)
+        random_numbers_2.extend(random_bits_2)
 
-# Funzione per generare numeri casuali localmente
-def generate_random_numbers_locally():
-    global random_numbers_1, random_numbers_2
-    random_bits = get_random_bits_locally(num_bits)
-    random_bits_1 = random_bits[:num_bits//2]
-    random_bits_2 = random_bits[num_bits//2:]
+        update_positions(random_bits_1, random_bits_2)
 
-    random_numbers_1.extend(random_bits_1)
-    random_numbers_2.extend(random_bits_2)
+        time.sleep(1)  # Pausa di 1 secondo
+
+# Funzione per aggiornare le posizioni delle auto
+def update_positions(bits1, bits2):
+    global car1_position, car2_position
+    entropy_1 = calculate_entropy(bits1)
+    entropy_2 = calculate_entropy(bits2)
+
+    # Logica per muovere le auto basata sull'entropia
+    car1_position += 10 * (1 - entropy_1)  # Muovi l'auto verde in base all'entropia
+    car2_position += 10 * (1 - entropy_2)  # Muovi l'auto rossa in base all'entropia
+
+    # Visualizza le posizioni delle auto
+    st.write(f"Posizione Auto Verde: {car1_position}")
+    st.write(f"Posizione Auto Rossa: {car2_position}")
+
+    # Visualizza le auto
+    fig, ax = plt.subplots()
+    ax.plot([car1_position], [1], 'go', label='Auto Verde')
+    ax.plot([car2_position], [2], 'ro', label='Auto Rossa')
+    ax.set_yticks([1, 2])
+    ax.set_yticklabels(['Auto Verde', 'Auto Rossa'])
+    ax.set_xlim([0, 100])
+    ax.set_ylim([0, 3])
+    ax.legend()
+    st.pyplot(fig)
 
 # Funzione per il download dei dati
 def download_data():
@@ -169,6 +193,7 @@ def download_data():
 
 # Pulsanti di controllo
 if st.button("Avvia Generazione"):
+    running = True
     start_reading()
 
 if st.button("Blocca Generazione"):
@@ -216,5 +241,3 @@ if random_numbers_1 and random_numbers_2:
     ax.set_ylabel('Frequenza')
     ax.legend()
     st.pyplot(fig)
-
-

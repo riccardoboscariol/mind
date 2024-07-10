@@ -125,7 +125,7 @@ def read_random_numbers_locally_continuously(sub_block_size, random_numbers):
         random_bits_2 = random_bits[sub_block_size:]
 
         random_numbers['1'].extend(random_bits_1)
-        random_numbers['2'].extend(random_bits_2]
+        random_numbers['2'].extend(random_bits_2)
 
         update_positions(random_bits_1, random_bits_2)
         time.sleep(1)
@@ -159,7 +159,6 @@ def update_plot():
     fig.savefig(buf, format='png')
     buf.seek(0)
     st.session_state.plot_image = buf.getvalue()
-    st.experimental_rerun()
 
 # Inizializza lo stato della sessione
 if 'car_positions' not in st.session_state:
@@ -195,8 +194,12 @@ if st.button("Scarica Dati"):
     st.success("I dati sono stati scaricati come CSV")
 
 # Visualizzazione delle posizioni delle auto
-if st.session_state.plot_image:
-    st.image(st.session_state.plot_image, use_column_width=True)
+image_placeholder = st.empty()
+
+while running:
+    if st.session_state.plot_image:
+        image_placeholder.image(st.session_state.plot_image, use_column_width=True)
+    time.sleep(1)
 
 st.write(f"Posizione Auto Verde: {st.session_state.car_positions['car1']}")
 st.write(f"Posizione Auto Rossa: {st.session_state.car_positions['car2']}")
@@ -240,3 +243,4 @@ if st.session_state.random_numbers['1'] and st.session_state.random_numbers['2']
     ax.set_ylabel('Frequenza')
     ax.legend()
     st.pyplot(fig)
+

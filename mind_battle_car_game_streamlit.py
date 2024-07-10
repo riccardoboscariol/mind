@@ -6,6 +6,28 @@ from PIL import Image
 from scipy.stats import mannwhitneyu, binomtest
 import matplotlib.pyplot as plt
 import io
+import requests
+
+# Funzione per ottenere bit casuali da random.org
+def get_random_bits_from_random_org(num_bits):
+    url = "https://www.random.org/integers/"
+    params = {
+        "num": num_bits,
+        "min": 0,
+        "max": 1,
+        "col": 1,
+        "base": 10,
+        "format": "plain",
+        "rnd": "new"
+    }
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        random_bits = list(map(int, response.text.strip().split()))
+        return random_bits
+    except requests.RequestException as e:
+        st.warning("Errore durante l'accesso a random.org: {}. Utilizzando la generazione locale.".format(e))
+        return get_random_bits(num_bits)
 
 # Funzione per ottenere bit casuali localmente
 def get_random_bits(num_bits):
@@ -51,7 +73,6 @@ def main():
     car_start_time = None
     best_time = None
     running = False
-    use_random_org = True
 
     car_placeholder = st.empty()
     car2_placeholder = st.empty()
@@ -63,8 +84,8 @@ def main():
         car_start_time = time.time()
         
         while running:
-            random_bits_1 = get_random_bits(5000)
-            random_bits_2 = get_random_bits(5000)
+            random_bits_1 = get_random_bits_from_random_org(5000)
+            random_bits_2 = get_random_bits_from_random_org(5000)
             
             random_numbers_1.extend(random_bits_1)
             random_numbers_2.extend(random_bits_2)

@@ -106,8 +106,6 @@ def main():
     car_progress = st.empty()
     car2_progress = st.empty()
 
-    widget_key_counter = 0
-
     if start_button:
         st.session_state.running = True
         st.session_state.car_start_time = time.time()
@@ -115,10 +113,12 @@ def main():
     if stop_button:
         st.session_state.running = False
 
-    if st.session_state.running:
-        widget_key_counter += 1  # Incrementa il contatore per ogni iterazione
-        
-        # Ottieni numeri casuali
+    car_image = Image.open("car.png").resize((140, 140))
+    car2_image = Image.open("car2.png").resize((140, 140))
+    car_placeholder.image(car_image, width=140)
+    car2_placeholder.image(car2_image, width=140)
+
+    while st.session_state.running:
         random_bits_1 = get_random_bits_from_random_org(5000)
         random_bits_2 = get_random_bits_from_random_org(5000)
         
@@ -147,16 +147,10 @@ def main():
             st.session_state.car2_pos = move_car(st.session_state.car2_pos, 6 * (1 + (10 * rarity_percentile)))
             st.session_state.car2_moves += 1
         
-        car_image = Image.open("car.png").resize((140, 140))
-        car2_image = Image.open("car2.png").resize((140, 140))
-        
-        car_placeholder.image(car_image, width=140)
-        car_progress.slider("Posizione Auto Rossa", min_value=0, max_value=1000, value=int(st.session_state.car_pos), key=f"slider1_{widget_key_counter}")
-        car2_placeholder.image(car2_image, width=140)
-        car2_progress.slider("Posizione Auto Verde", min_value=0, max_value=1000, value=int(st.session_state.car2_pos), key=f"slider2_{widget_key_counter}")
+        car_progress.slider("Posizione Auto Rossa", min_value=0, max_value=1000, value=int(st.session_state.car_pos), key="slider1")
+        car2_progress.slider("Posizione Auto Verde", min_value=0, max_value=1000, value=int(st.session_state.car2_pos), key="slider2")
 
-        # Aggiungi un ritardo per permettere all'interfaccia di aggiornarsi
-        time.sleep(1)  # Aumentato a 1 secondo
+        time.sleep(0.1)
         st.experimental_rerun()
 
     if download_button:

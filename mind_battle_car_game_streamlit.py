@@ -79,11 +79,15 @@ def main():
     car_progress = st.empty()
     car2_progress = st.empty()
 
+    widget_key_counter = 0
+
     if start_button:
         running = True
         car_start_time = time.time()
         
         while running:
+            widget_key_counter += 1  # Incrementa il contatore per ogni iterazione
+            
             random_bits_1 = get_random_bits_from_random_org(5000)
             random_bits_2 = get_random_bits_from_random_org(5000)
             
@@ -116,9 +120,9 @@ def main():
             car2_image = Image.open("car2.png").resize((140, 140))
             
             car_placeholder.image(car_image, width=140)
-            car_progress.slider("Posizione Auto Rossa", min_value=0, max_value=1000, value=int(car_pos), key="slider1")
+            car_progress.slider("Posizione Auto Rossa", min_value=0, max_value=1000, value=int(car_pos), key=f"slider1_{widget_key_counter}")
             car2_placeholder.image(car2_image, width=140)
-            car2_progress.slider("Posizione Auto Verde", min_value=0, max_value=1000, value=int(car2_pos), key="slider2")
+            car2_progress.slider("Posizione Auto Verde", min_value=0, max_value=1000, value=int(car2_pos), key=f"slider2_{widget_key_counter}")
             
             time.sleep(0.1)
 

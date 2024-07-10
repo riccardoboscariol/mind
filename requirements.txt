@@ -5,3 +5,5 @@ scipy
 requests
 matplotlib
 pyserial
+pillow
+openpyxl

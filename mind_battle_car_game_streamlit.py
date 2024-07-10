@@ -4,10 +4,10 @@ import pandas as pd
 import numpy as np
 from scipy.stats import mannwhitneyu, binomtest
 import matplotlib.pyplot as plt
+import threading
+import time
 import serial
 import serial.tools.list_ports
-import time
-import threading
 
 # Funzione per ottenere i bit casuali da random.org
 def get_random_bits_from_random_org(num_bits):
@@ -56,7 +56,8 @@ def start_reading():
     if not running:
         ports = list_serial_ports()
         if not ports:
-            st.error("Nessuna porta seriale trovata")
+            st.warning("Nessuna porta seriale trovata, utilizzerò random.org per generare i numeri casuali.")
+            generate_random_numbers_from_random_org()
             return
 
         # Assumi che la prima porta sia TrueRNG
@@ -69,7 +70,7 @@ def start_reading():
             return
 
         running = True
-        reading_thread = threading.Thread(target=read_random_numbers)
+        reading_thread = threading.Thread(target=read_random_numbers_from_truerng)
         reading_thread.start()
 
 # Funzione per fermare la lettura dalla porta seriale
@@ -80,7 +81,7 @@ def stop_reading():
         ser.close()
 
 # Funzione per leggere i numeri casuali dalla porta seriale
-def read_random_numbers():
+def read_random_numbers_from_truerng():
     global running, ser, random_numbers_1, random_numbers_2
     while running:
         try:
@@ -98,6 +99,16 @@ def read_random_numbers():
             print(f"Errore durante la lettura: {str(e)}")
             running = False
             break
+
+# Funzione per generare numeri casuali da random.org
+def generate_random_numbers_from_random_org():
+    global random_numbers_1, random_numbers_2
+    random_bits = get_random_bits_from_random_org(num_bits)
+    random_bits_1 = random_bits[:num_bits//2]
+    random_bits_2 = random_bits[num_bits//2:]
+
+    random_numbers_1.extend(random_bits_1)
+    random_numbers_2.extend(random_bits_2)
 
 # Funzione per il download dei dati
 def download_data():
@@ -156,3 +167,4 @@ if random_numbers_1 and random_numbers_2:
     ax.set_ylabel('Frequenza')
     ax.legend()
     st.pyplot(fig)
+

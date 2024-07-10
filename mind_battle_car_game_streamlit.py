@@ -135,8 +135,14 @@ def update_positions(bits1, bits2):
     entropy_1 = calculate_entropy(bits1)
     entropy_2 = calculate_entropy(bits2)
 
-    st.session_state.car_positions['car1'] += 10 * (1 - entropy_1)  # Muovi l'auto verde in base all'entropia
-    st.session_state.car_positions['car2'] += 10 * (1 - entropy_2)  # Muovi l'auto rossa in base all'entropia
+    percentile_5_1 = np.percentile(st.session_state.data_for_condition_1, 5)
+    percentile_5_2 = np.percentile(st.session_state.data_for_condition_2, 5)
+    if entropy_1 < percentile_5_1:
+        rarity_percentile = 1 - (entropy_1 / percentile_5_1)
+        st.session_state.car_positions['car1'] += 10 * (1 + (10 * rarity_percentile))  # Muovi l'auto verde in base all'entropia
+    if entropy_2 < percentile_5_2:
+        rarity_percentile = 1 - (entropy_2 / percentile_5_2)
+        st.session_state.car_positions['car2'] += 10 * (1 + (10 * rarity_percentile))  # Muovi l'auto rossa in base all'entropia
 
     if st.session_state.car_positions['car1'] > 1000:
         st.session_state.car_positions['car1'] = 1000
@@ -167,6 +173,10 @@ if 'random_numbers' not in st.session_state:
     st.session_state.random_numbers = {'1': [], '2': []}
 if 'plot_image' not in st.session_state:
     st.session_state.plot_image = None
+if 'data_for_condition_1' not in st.session_state:
+    st.session_state.data_for_condition_1 = []
+if 'data_for_condition_2' not in st.session_state:
+    st.session_state.data_for_condition_2 = []
 
 # Imposta l'interfaccia Streamlit
 st.title("Mind Battle Car Game")

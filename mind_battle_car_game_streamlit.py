@@ -51,7 +51,7 @@ def move_car(car_pos, distance):
 
 # Funzione principale
 def main():
-    st.title("Generatore di Anomalie Casuali Binari")
+    st.title("Mind Battle Car Game")
     
     start_button = st.button("Avvia Generazione")
     stop_button = st.button("Blocca Generazione")

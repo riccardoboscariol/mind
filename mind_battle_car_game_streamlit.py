@@ -22,7 +22,13 @@ def get_random_bits_from_random_org(num_bits):
         "rnd": "new"
     }
     response = requests.get(url, params=params)
-    random_bits = list(map(int, response.text.strip().split()))
+    try:
+        random_bits = list(map(int, response.text.strip().split()))
+        if len(random_bits) != num_bits:
+            raise ValueError("Number of bits received does not match the requested number.")
+    except Exception as e:
+        st.error(f"Errore durante l'ottenimento dei bit casuali da random.org: {e}")
+        random_bits = []
     return random_bits
 
 # Funzione per calcolare l'entropia
@@ -104,11 +110,12 @@ def read_random_numbers_from_truerng():
 def generate_random_numbers_from_random_org():
     global random_numbers_1, random_numbers_2
     random_bits = get_random_bits_from_random_org(num_bits)
-    random_bits_1 = random_bits[:num_bits//2]
-    random_bits_2 = random_bits[num_bits//2:]
+    if random_bits:
+        random_bits_1 = random_bits[:num_bits//2]
+        random_bits_2 = random_bits[num_bits//2:]
 
-    random_numbers_1.extend(random_bits_1)
-    random_numbers_2.extend(random_bits_2)
+        random_numbers_1.extend(random_bits_1)
+        random_numbers_2.extend(random_bits_2)
 
 # Funzione per il download dei dati
 def download_data():
@@ -167,4 +174,5 @@ if random_numbers_1 and random_numbers_2:
     ax.set_ylabel('Frequenza')
     ax.legend()
     st.pyplot(fig)
+
 

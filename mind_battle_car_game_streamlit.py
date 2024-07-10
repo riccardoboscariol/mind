@@ -9,7 +9,6 @@ import io
 import requests
 
 # Funzione per ottenere bit casuali da random.org
-@st.cache_data
 def get_random_bits_from_random_org(num_bits):
     url = "https://www.random.org/integers/"
     params = {
@@ -30,7 +29,7 @@ def get_random_bits_from_random_org(num_bits):
         if not st.session_state.get('random_org_warning_shown', False):
             st.session_state['random_org_warning_shown'] = True
             st.warning("Errore durante l'accesso a random.org: {}. Utilizzando la generazione locale.".format(e))
-        return np.random.randint(0, 2, num_bits).tolist()
+        return get_random_bits(num_bits)
 
 # Funzione per ottenere bit casuali localmente
 def get_random_bits(num_bits):
@@ -119,6 +118,7 @@ def main():
     if st.session_state.running:
         widget_key_counter += 1  # Incrementa il contatore per ogni iterazione
         
+        # Ottieni numeri casuali
         random_bits_1 = get_random_bits_from_random_org(5000)
         random_bits_2 = get_random_bits_from_random_org(5000)
         
@@ -156,7 +156,7 @@ def main():
         car2_progress.slider("Posizione Auto Verde", min_value=0, max_value=1000, value=int(st.session_state.car2_pos), key=f"slider2_{widget_key_counter}")
 
         # Aggiungi un ritardo per permettere all'interfaccia di aggiornarsi
-        time.sleep(0.5)
+        time.sleep(1)  # Aumentato a 1 secondo
         st.experimental_rerun()
 
     if download_button:

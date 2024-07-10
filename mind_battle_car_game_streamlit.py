@@ -253,4 +253,3 @@ if st.session_state.random_numbers['1'] and st.session_state.random_numbers['2']
     ax.set_ylabel('Frequenza')
     ax.legend()
     st.pyplot(fig)
-

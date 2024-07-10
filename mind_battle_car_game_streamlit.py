@@ -53,12 +53,12 @@ def move_car(car_pos, distance):
 def main():
     st.title("Mind Battle Car Game")
     
-    start_button = st.button("Avvia Generazione")
-    stop_button = st.button("Blocca Generazione")
-    download_button = st.button("Scarica Dati")
-    download_graph_button = st.button("Scarica Grafico")
-    stats_button = st.button("Mostra Analisi Statistiche")
-    reset_button = st.button("Resetta Gioco")
+    start_button = st.button("Avvia Generazione", key="start")
+    stop_button = st.button("Blocca Generazione", key="stop")
+    download_button = st.button("Scarica Dati", key="download_data")
+    download_graph_button = st.button("Scarica Grafico", key="download_graph")
+    stats_button = st.button("Mostra Analisi Statistiche", key="stats")
+    reset_button = st.button("Resetta Gioco", key="reset")
     
     car_pos = 50
     car2_pos = 50
@@ -116,9 +116,9 @@ def main():
             car2_image = Image.open("car2.png").resize((140, 140))
             
             car_placeholder.image(car_image, width=140)
-            car_progress.slider("Posizione Auto Rossa", min_value=0, max_value=1000, value=int(car_pos))
+            car_progress.slider("Posizione Auto Rossa", min_value=0, max_value=1000, value=int(car_pos), key="slider1")
             car2_placeholder.image(car2_image, width=140)
-            car2_progress.slider("Posizione Auto Verde", min_value=0, max_value=1000, value=int(car2_pos))
+            car2_progress.slider("Posizione Auto Verde", min_value=0, max_value=1000, value=int(car2_pos), key="slider2")
             
             time.sleep(0.1)
 
@@ -141,7 +141,6 @@ def main():
             "Condizione 2": [''.join(map(str, row)) for row in data_for_excel_2]
         })
         df.to_excel("random_numbers.xlsx", index=False)
-        st.success("Dati salvati in random_numbers.xlsx")
         with open("random_numbers.xlsx", "rb") as file:
             st.download_button(
                 label="Scarica Dati",
@@ -174,14 +173,19 @@ def main():
             binom_p_value_moves = binomtest(car1_moves, total_moves, alternative='two-sided').pvalue
             binom_text_moves = f"Test Binomiale (numero di spostamenti): p-value = {binom_p_value_moves:.4f}"
         else:
-            binom_p_value_moves = 1.0
             binom_text_moves = "Test Binomiale (numero di spostamenti): Dati insufficienti"
 
-        binom_p_value_1 = binomtest(np.sum(random_numbers_1), len(random_numbers_1), alternative='two-sided').pvalue
-        binom_text_1 = f"Test Binomiale (cifre auto verde): p-value = {binom_p_value_1:.4f}"
+        if random_numbers_1:
+            binom_p_value_1 = binomtest(np.sum(random_numbers_1), len(random_numbers_1), alternative='two-sided').pvalue
+            binom_text_1 = f"Test Binomiale (cifre auto verde): p-value = {binom_p_value_1:.4f}"
+        else:
+            binom_text_1 = "Test Binomiale (cifre auto verde): Dati insufficienti"
 
-        binom_p_value_2 = binomtest(np.sum(random_numbers_2), len(random_numbers_2), alternative='two-sided').pvalue
-        binom_text_2 = f"Test Binomiale (cifre auto rossa): p-value = {binom_p_value_2:.4f}"
+        if random_numbers_2:
+            binom_p_value_2 = binomtest(np.sum(random_numbers_2), len(random_numbers_2), alternative='two-sided').pvalue
+            binom_text_2 = f"Test Binomiale (cifre auto rossa): p-value = {binom_p_value_2:.4f}"
+        else:
+            binom_text_2 = "Test Binomiale (cifre auto rossa): Dati insufficienti"
 
         stats_text = mann_whitney_text + "\n" + binom_text_moves + "\n" + binom_text_1 + "\n" + binom_text_2
         st.write(stats_text)

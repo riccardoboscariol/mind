@@ -12,6 +12,10 @@ import serial.tools.list_ports
 # Costante per il numero massimo di bit per richiesta
 MAX_BITS_PER_REQUEST = 10000
 
+# Variabili globali per la gestione dei thread e della seriale
+ser = None
+running = False
+
 # Funzione per ottenere i bit casuali da random.org con gestione dei limiti
 def get_random_bits_from_random_org(num_bits):
     random_bits = []
@@ -64,6 +68,7 @@ def list_serial_ports():
 
 # Funzione per iniziare la lettura dalla porta seriale
 def start_reading(use_random_org, sub_block_size, car_positions, random_numbers):
+    global running
     if use_random_org:
         read_random_numbers_from_random_org_continuously(sub_block_size, car_positions, random_numbers)
     else:
@@ -79,7 +84,8 @@ def start_reading(use_random_org, sub_block_size, car_positions, random_numbers)
 
 # Funzione per leggere i numeri casuali dalla porta seriale in modo continuo
 def read_random_numbers_from_truerng_continuously(ser, sub_block_size, car_positions, random_numbers):
-    while True:
+    global running
+    while running:
         random_bytes = ser.read(2 * sub_block_size // 8)  # Leggi i byte necessari per 10000 bit (1250 byte)
         random_bits = [int(bit) for byte in random_bytes for bit in format(byte, '08b')]
 
@@ -94,7 +100,8 @@ def read_random_numbers_from_truerng_continuously(ser, sub_block_size, car_posit
 
 # Funzione per leggere i numeri casuali da random.org in modo continuo
 def read_random_numbers_from_random_org_continuously(sub_block_size, car_positions, random_numbers):
-    while True:
+    global running
+    while running:
         random_bits = get_random_bits_from_random_org(2 * sub_block_size)
         if not random_bits:
             random_bits = get_random_bits_locally(2 * sub_block_size)
@@ -109,7 +116,8 @@ def read_random_numbers_from_random_org_continuously(sub_block_size, car_positio
 
 # Funzione per leggere i numeri casuali localmente in modo continuo
 def read_random_numbers_locally_continuously(sub_block_size, car_positions, random_numbers):
-    while True:
+    global running
+    while running:
         random_bits = get_random_bits_locally(2 * sub_block_size)
         random_bits_1 = random_bits[:sub_block_size]
         random_bits_2 = random_bits[sub_block_size:]
@@ -132,6 +140,9 @@ def update_positions(bits1, bits2, car_positions):
         car_positions['car1'] = 1000
     if car_positions['car2'] > 1000:
         car_positions['car2'] = 1000
+
+    # Aggiornamento automatico della visualizzazione
+    st.experimental_rerun()
 
 # Imposta l'interfaccia Streamlit
 st.title("Mind Battle Car Game")

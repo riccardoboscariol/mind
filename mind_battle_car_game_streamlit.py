@@ -73,7 +73,18 @@ running = False
 
 # Funzione per listare le porte seriali
 def list_serial_ports():
-    return [port.device for port in serial.tools.list_ports.comports()]
+    ports = list(serial.tools.list_ports.comports())
+    if ports:
+        return [port.device for port in ports]
+    else:
+        return []
+
+# Visualizza le porte seriali disponibili
+ports = list_serial_ports()
+if ports:
+    st.write("Porte seriali disponibili:", ports)
+else:
+    st.write("Nessuna porta seriale trovata.")
 
 # Funzione per iniziare la lettura dalla porta seriale
 def start_reading():
@@ -87,6 +98,7 @@ def start_reading():
 
         # Assumi che la prima porta sia TrueRNG
         true_rng_port = ports[0]
+        st.write(f"Utilizzo della porta seriale: {true_rng_port}")
 
         try:
             ser = serial.Serial(true_rng_port, 9600, timeout=1)

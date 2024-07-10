@@ -67,23 +67,24 @@ def list_serial_ports():
     return [port.device for port in serial.tools.list_ports.comports()]
 
 # Funzione per iniziare la lettura dalla porta seriale
-def start_reading(use_random_org, sub_block_size, car_positions, random_numbers):
+def start_reading(use_random_org, sub_block_size, random_numbers):
     global running
+    running = True
     if use_random_org:
-        read_random_numbers_from_random_org_continuously(sub_block_size, car_positions, random_numbers)
+        read_random_numbers_from_random_org_continuously(sub_block_size, random_numbers)
     else:
         ports = list_serial_ports()
         if not ports:
             st.warning("Nessuna porta seriale trovata, utilizzerò un generatore locale per generare i numeri casuali.")
-            read_random_numbers_locally_continuously(sub_block_size, car_positions, random_numbers)
+            read_random_numbers_locally_continuously(sub_block_size, random_numbers)
         else:
             true_rng_port = ports[0]
             st.write(f"Utilizzo della porta seriale: {true_rng_port}")
             ser = serial.Serial(true_rng_port, 9600, timeout=1)
-            read_random_numbers_from_truerng_continuously(ser, sub_block_size, car_positions, random_numbers)
+            read_random_numbers_from_truerng_continuously(ser, sub_block_size, random_numbers)
 
 # Funzione per leggere i numeri casuali dalla porta seriale in modo continuo
-def read_random_numbers_from_truerng_continuously(ser, sub_block_size, car_positions, random_numbers):
+def read_random_numbers_from_truerng_continuously(ser, sub_block_size, random_numbers):
     global running
     while running:
         random_bytes = ser.read(2 * sub_block_size // 8)  # Leggi i byte necessari per 10000 bit (1250 byte)
@@ -95,11 +96,11 @@ def read_random_numbers_from_truerng_continuously(ser, sub_block_size, car_posit
         random_numbers['1'].extend(random_bits_1)
         random_numbers['2'].extend(random_bits_2)
 
-        update_positions(random_bits_1, random_bits_2, car_positions)
+        update_positions(random_bits_1, random_bits_2)
         time.sleep(1)
 
 # Funzione per leggere i numeri casuali da random.org in modo continuo
-def read_random_numbers_from_random_org_continuously(sub_block_size, car_positions, random_numbers):
+def read_random_numbers_from_random_org_continuously(sub_block_size, random_numbers):
     global running
     while running:
         random_bits = get_random_bits_from_random_org(2 * sub_block_size)
@@ -111,11 +112,11 @@ def read_random_numbers_from_random_org_continuously(sub_block_size, car_positio
         random_numbers['1'].extend(random_bits_1)
         random_numbers['2'].extend(random_bits_2)
 
-        update_positions(random_bits_1, random_bits_2, car_positions)
+        update_positions(random_bits_1, random_bits_2)
         time.sleep(1)
 
 # Funzione per leggere i numeri casuali localmente in modo continuo
-def read_random_numbers_locally_continuously(sub_block_size, car_positions, random_numbers):
+def read_random_numbers_locally_continuously(sub_block_size, random_numbers):
     global running
     while running:
         random_bits = get_random_bits_locally(2 * sub_block_size)
@@ -125,32 +126,35 @@ def read_random_numbers_locally_continuously(sub_block_size, car_positions, rand
         random_numbers['1'].extend(random_bits_1)
         random_numbers['2'].extend(random_bits_2)
 
-        update_positions(random_bits_1, random_bits_2, car_positions)
+        update_positions(random_bits_1, random_bits_2)
         time.sleep(1)
 
 # Funzione per aggiornare le posizioni delle auto
-def update_positions(bits1, bits2, car_positions):
+def update_positions(bits1, bits2):
     entropy_1 = calculate_entropy(bits1)
     entropy_2 = calculate_entropy(bits2)
 
-    car_positions['car1'] += 10 * (1 - entropy_1)  # Muovi l'auto verde in base all'entropia
-    car_positions['car2'] += 10 * (1 - entropy_2)  # Muovi l'auto rossa in base all'entropia
+    st.session_state.car_positions['car1'] += 10 * (1 - entropy_1)  # Muovi l'auto verde in base all'entropia
+    st.session_state.car_positions['car2'] += 10 * (1 - entropy_2)  # Muovi l'auto rossa in base all'entropia
 
-    if car_positions['car1'] > 1000:
-        car_positions['car1'] = 1000
-    if car_positions['car2'] > 1000:
-        car_positions['car2'] = 1000
+    if st.session_state.car_positions['car1'] > 1000:
+        st.session_state.car_positions['car1'] = 1000
+    if st.session_state.car_positions['car2'] > 1000:
+        st.session_state.car_positions['car2'] = 1000
 
-    # Aggiornamento automatico della visualizzazione
     st.experimental_rerun()
+
+# Inizializza lo stato della sessione
+if 'car_positions' not in st.session_state:
+    st.session_state.car_positions = {'car1': 0, 'car2': 0}
+if 'random_numbers' not in st.session_state:
+    st.session_state.random_numbers = {'1': [], '2': []}
 
 # Imposta l'interfaccia Streamlit
 st.title("Mind Battle Car Game")
 
 num_bits = 10000
 sub_block_size = 5000
-car_positions = {'car1': 0, 'car2': 0}
-random_numbers = {'1': [], '2': []}
 use_random_org = False
 
 # Pulsanti di controllo
@@ -159,26 +163,25 @@ if st.button("Avvia Generazione"):
     if not ports:
         st.warning("Nessuna porta seriale trovata, utilizzerò random.org per generare i numeri casuali.")
         use_random_org = True
-    running = True
-    threading.Thread(target=start_reading, args=(use_random_org, sub_block_size, car_positions, random_numbers)).start()
+    threading.Thread(target=start_reading, args=(use_random_org, sub_block_size, st.session_state.random_numbers)).start()
 
 if st.button("Blocca Generazione"):
     running = False
 
 if st.button("Scarica Dati"):
-    data_1 = pd.DataFrame({'Auto Verde': random_numbers['1']})
-    data_2 = pd.DataFrame({'Auto Rossa': random_numbers['2']})
+    data_1 = pd.DataFrame({'Auto Verde': st.session_state.random_numbers['1']})
+    data_2 = pd.DataFrame({'Auto Rossa': st.session_state.random_numbers['2']})
     data_1.to_csv('auto_verde_dati.csv', index=False)
     data_2.to_csv('auto_rossa_dati.csv', index=False)
     st.success("I dati sono stati scaricati come CSV")
 
 # Visualizzazione delle posizioni delle auto
-st.write(f"Posizione Auto Verde: {car_positions['car1']}")
-st.write(f"Posizione Auto Rossa: {car_positions['car2']}")
+st.write(f"Posizione Auto Verde: {st.session_state.car_positions['car1']}")
+st.write(f"Posizione Auto Rossa: {st.session_state.car_positions['car2']}")
 
 fig, ax = plt.subplots()
-ax.plot([car_positions['car1']], [1], 'go', label='Auto Verde')
-ax.plot([car_positions['car2']], [2], 'ro', label='Auto Rossa')
+ax.plot([st.session_state.car_positions['car1']], [1], 'go', label='Auto Verde')
+ax.plot([st.session_state.car_positions['car2']], [2], 'ro', label='Auto Rossa')
 ax.set_yticks([1, 2])
 ax.set_yticklabels(['Auto Verde', 'Auto Rossa'])
 ax.set_xlim([0, 1000])
@@ -187,25 +190,25 @@ ax.legend()
 st.pyplot(fig)
 
 # Visualizzazione delle statistiche
-if random_numbers['1'] and random_numbers['2']:
-    entropy_1 = calculate_entropy(random_numbers['1'])
-    entropy_2 = calculate_entropy(random_numbers['2'])
+if st.session_state.random_numbers['1'] and st.session_state.random_numbers['2']:
+    entropy_1 = calculate_entropy(st.session_state.random_numbers['1'])
+    entropy_2 = calculate_entropy(st.session_state.random_numbers['2'])
 
     st.write(f"Entropia Auto Verde: {entropy_1}")
     st.write(f"Entropia Auto Rossa: {entropy_2}")
 
-    u_stat, p_value_mw = mannwhitneyu(random_numbers['1'], random_numbers['2'], alternative='two-sided')
+    u_stat, p_value_mw = mannwhitneyu(st.session_state.random_numbers['1'], st.session_state.random_numbers['2'], alternative='two-sided')
     st.write(f"Mann-Whitney U test: U-stat = {u_stat:.4f}, p-value = {p_value_mw:.4f}")
 
-    total_moves_1 = sum(random_numbers['1'])
-    total_moves_2 = sum(random_numbers['2'])
-    binom_p_value_moves = binomtest(total_moves_1, len(random_numbers['1']), alternative='two-sided').pvalue
+    total_moves_1 = sum(st.session_state.random_numbers['1'])
+    total_moves_2 = sum(st.session_state.random_numbers['2'])
+    binom_p_value_moves = binomtest(total_moves_1, len(st.session_state.random_numbers['1']), alternative='two-sided').pvalue
     st.write(f"Test Binomiale (numero di spostamenti): p-value = {binom_p_value_moves:.4f}")
 
-    binom_p_value_1 = binomtest(np.sum(random_numbers['1']), len(random_numbers['1']), alternative='two-sided').pvalue
+    binom_p_value_1 = binomtest(np.sum(st.session_state.random_numbers['1']), len(st.session_state.random_numbers['1']), alternative='two-sided').pvalue
     st.write(f"Test Binomiale (cifre auto verde): p-value = {binom_p_value_1:.4f}")
 
-    binom_p_value_2 = binomtest(np.sum(random_numbers['2']), len(random_numbers['2']), alternative='two-sided').pvalue
+    binom_p_value_2 = binomtest(np.sum(st.session_state.random_numbers['2']), len(st.session_state.random_numbers['2']), alternative='two-sided').pvalue
     st.write(f"Test Binomiale (cifre auto rossa): p-value = {binom_p_value_2:.4f}")
 
     st.write(f"Posizione Auto Verde: {total_moves_1 / 100.0}")
@@ -213,8 +216,8 @@ if random_numbers['1'] and random_numbers['2']:
 
     # Plot dei dati
     df = pd.DataFrame({
-        "Auto Verde": random_numbers['1'],
-        "Auto Rossa": random_numbers['2']
+        "Auto Verde": st.session_state.random_numbers['1'],
+        "Auto Rossa": st.session_state.random_numbers['2']
     })
 
     fig, ax = plt.subplots(figsize=(10, 6))

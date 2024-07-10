@@ -3,12 +3,10 @@ import requests
 import pandas as pd
 import numpy as np
 from scipy.stats import mannwhitneyu, binomtest
-import matplotlib.pyplot as plt
-import time
 import threading
+import time
 import serial
 import serial.tools.list_ports
-import io
 
 # Costante per il numero massimo di bit per richiesta
 MAX_BITS_PER_REQUEST = 10000
@@ -135,8 +133,9 @@ def update_positions(bits1, bits2):
     entropy_1 = calculate_entropy(bits1)
     entropy_2 = calculate_entropy(bits2)
 
-    percentile_5_1 = np.percentile(st.session_state.data_for_condition_1, 5)
-    percentile_5_2 = np.percentile(st.session_state.data_for_condition_2, 5)
+    percentile_5_1 = np.percentile(st.session_state.data_for_condition_1, 5) if st.session_state.data_for_condition_1 else 1
+    percentile_5_2 = np.percentile(st.session_state.data_for_condition_2, 5) if st.session_state.data_for_condition_2 else 1
+    
     if entropy_1 < percentile_5_1:
         rarity_percentile = 1 - (entropy_1 / percentile_5_1)
         st.session_state.car_positions['car1'] += 10 * (1 + (10 * rarity_percentile))  # Muovi l'auto verde in base all'entropia
@@ -150,33 +149,25 @@ def update_positions(bits1, bits2):
         st.session_state.car_positions['car2'] = 1000
 
     # Aggiornamento automatico della visualizzazione
-    update_plot()
+    update_bars()
 
-def update_plot():
-    fig, ax = plt.subplots()
-    ax.plot([st.session_state.car_positions['car1']], [1], 'go', label='Auto Verde')
-    ax.plot([st.session_state.car_positions['car2']], [2], 'ro', label='Auto Rossa')
-    ax.set_yticks([1, 2])
-    ax.set_yticklabels(['Auto Verde', 'Auto Rossa'])
-    ax.set_xlim([0, 1000])
-    ax.set_ylim([0, 3])
-    ax.legend()
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png')
-    buf.seek(0)
-    st.session_state.plot_image = buf.getvalue()
+def update_bars():
+    st.session_state.progress_bar_1.progress(st.session_state.car_positions['car1'] / 1000)
+    st.session_state.progress_bar_2.progress(st.session_state.car_positions['car2'] / 1000)
 
 # Inizializza lo stato della sessione
 if 'car_positions' not in st.session_state:
     st.session_state.car_positions = {'car1': 0, 'car2': 0}
 if 'random_numbers' not in st.session_state:
     st.session_state.random_numbers = {'1': [], '2': []}
-if 'plot_image' not in st.session_state:
-    st.session_state.plot_image = None
 if 'data_for_condition_1' not in st.session_state:
     st.session_state.data_for_condition_1 = []
 if 'data_for_condition_2' not in st.session_state:
     st.session_state.data_for_condition_2 = []
+if 'progress_bar_1' not in st.session_state:
+    st.session_state.progress_bar_1 = st.empty().progress(0)
+if 'progress_bar_2' not in st.session_state:
+    st.session_state.progress_bar_2 = st.empty().progress(0)
 
 # Imposta l'interfaccia Streamlit
 st.title("Mind Battle Car Game")
@@ -204,13 +195,11 @@ if st.button("Scarica Dati"):
     st.success("I dati sono stati scaricati come CSV")
 
 # Visualizzazione delle posizioni delle auto
-image_placeholder = st.empty()
+progress_bar_1 = st.session_state.progress_bar_1
+progress_bar_2 = st.session_state.progress_bar_2
 
-# Loop per aggiornare l'immagine
-while running:
-    if st.session_state.plot_image:
-        image_placeholder.image(st.session_state.plot_image, use_column_width=True)
-    time.sleep(1)
+# Aggiorna le barre di progresso
+update_bars()
 
 st.write(f"Posizione Auto Verde: {st.session_state.car_positions['car1']}")
 st.write(f"Posizione Auto Rossa: {st.session_state.car_positions['car2']}")

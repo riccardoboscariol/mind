@@ -7,6 +7,8 @@ from scipy.stats import mannwhitneyu, binomtest
 import matplotlib.pyplot as plt
 import io
 import requests
+import serial
+import serial.tools.list_ports
 
 # Funzione per ottenere bit casuali da random.org
 def get_random_bits_from_random_org(num_bits):
@@ -35,6 +37,23 @@ def get_random_bits_from_random_org(num_bits):
 def get_random_bits(num_bits):
     return np.random.randint(0, 2, num_bits).tolist()
 
+# Funzione per rilevare la chiavetta TrueRNG e leggere i numeri casuali
+def get_random_bits_from_truerng(num_bits):
+    ports = list(serial.tools.list_ports.comports())
+    for port in ports:
+        if 'TrueRNG' in port.description:
+            try:
+                ser = serial.Serial(port.device, 115200, timeout=1)
+                random_bits = []
+                while len(random_bits) < num_bits:
+                    random_bits.extend([int(bit) for bit in bin(int.from_bytes(ser.read(1), 'big'))[2:].zfill(8)])
+                ser.close()
+                return random_bits[:num_bits]
+            except Exception as e:
+                st.warning("Errore durante la lettura dalla chiavetta TrueRNG: {}. Utilizzando la generazione locale.".format(e))
+                return get_random_bits(num_bits)
+    return None
+
 # Funzione per calcolare l'entropia
 def calculate_entropy(bits):
     n = len(bits)
@@ -60,9 +79,15 @@ def main():
         <style>
         .stSlider > div > div > div > div > div {
             background: red;
+            border-radius: 50%;
+            height: 14px;
+            width: 14px;
         }
         .stSlider > div > div > div > div > div:nth-child(2) {
             background: green;
+            border-radius: 50%;
+            height: 14px;
+            width: 14px;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -121,8 +146,19 @@ def main():
         st.session_state.running = False
 
     while st.session_state.running:
-        random_bits_1 = get_random_bits_from_random_org(5000)
-        random_bits_2 = get_random_bits_from_random_org(5000)
+        # Priorità: TrueRNG > Random.org > Generazione locale
+        random_bits_1 = get_random_bits_from_truerng(5000)
+        random_bits_2 = get_random_bits_from_truerng(5000)
+        
+        if random_bits_1 is None:
+            random_bits_1 = get_random_bits_from_random_org(5000)
+        if random_bits_2 is None:
+            random_bits_2 = get_random_bits_from_random_org(5000)
+
+        if random_bits_1 is None:
+            random_bits_1 = get_random_bits(5000)
+        if random_bits_2 is None:
+            random_bits_2 = get_random_bits(5000)
         
         st.session_state.random_numbers_1.extend(random_bits_1)
         st.session_state.random_numbers_2.extend(random_bits_2)

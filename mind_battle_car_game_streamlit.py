@@ -55,6 +55,18 @@ def move_car(car_pos, distance):
 def main():
     st.title("Mind Battle Car Game")
 
+    # CSS per personalizzare i colori degli slider
+    st.markdown("""
+        <style>
+        .stSlider > div > div > div > div > div {
+            background: red;
+        }
+        .stSlider > div > div > div > div > div:nth-child(2) {
+            background: green;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
     start_button = st.button("Avvia Generazione", key="start")
     stop_button = st.button("Blocca Generazione", key="stop")
     download_button = st.button("Scarica Dati", key="download_data")
@@ -93,9 +105,13 @@ def main():
 
     car_placeholder = st.empty()
     car2_placeholder = st.empty()
+    car_progress = st.empty()
+    car2_progress = st.empty()
 
     car_image = Image.open("car.png").resize((140, 140))
     car2_image = Image.open("car2.png").resize((140, 140))
+    car_placeholder.image(car_image, width=140)
+    car2_placeholder.image(car2_image, width=140)
 
     if start_button:
         st.session_state.running = True
@@ -134,10 +150,8 @@ def main():
             st.session_state.car2_moves += 1
         
         st.session_state.widget_key_counter += 1  # Incrementa il contatore per ogni iterazione
-        
-        # Aggiorna le immagini delle auto con la nuova posizione
-        car_placeholder.image(car_image, width=140, use_column_width=False, caption=f'Posizione Auto Rossa: {int(st.session_state.car_pos)}')
-        car2_placeholder.image(car2_image, width=140, use_column_width=False, caption=f'Posizione Auto Verde: {int(st.session_state.car2_pos)}')
+        car_progress.slider("Posizione Auto Rossa", min_value=0, max_value=1000, value=int(st.session_state.car_pos), key=f"slider1_{st.session_state.widget_key_counter}")
+        car2_progress.slider("Posizione Auto Verde", min_value=0, max_value=1000, value=int(st.session_state.car2_pos), key=f"slider2_{st.session_state.widget_key_counter}")
 
         time.sleep(0.1)
 
@@ -218,4 +232,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

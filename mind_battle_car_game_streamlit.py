@@ -31,7 +31,7 @@ def get_random_bits_from_random_org(num_bits):
     except requests.RequestException as e:
         if not st.session_state.get('random_org_warning_shown', False):
             st.session_state['random_org_warning_shown'] = True
-            st.warning("Errore durante l'accesso a random.org: {}. Utilizzando la generazione locale.".format(e))
+            st.warning(f"Troppe richieste a random.org. Utilizzando la generazione locale. Dettagli: {e}")
         return get_random_bits(num_bits)
 
 # Funzione per ottenere bit casuali localmente
@@ -96,6 +96,7 @@ def main():
         .slider-container {
             position: relative;
             height: 120px; /* Aumentato per dare più spazio tra slider e scritte */
+            margin-bottom: 50px; /* Aggiunto margine inferiore per slider con macchina rossa */
         }
         .car-image {
             position: absolute;
@@ -202,7 +203,7 @@ def main():
         st.session_state.widget_key_counter += 1  # Incrementa il contatore per ogni iterazione
         
         car_placeholder.markdown(f"""
-            <div class="slider-container">
+            <div class="slider-container" style="margin-bottom: 80px;">
                 <img src="data:image/png;base64,{car_image_base64}" class="car-image" style="left:{st.session_state.car_pos / 10}%">
                 <input type="range" min="0" max="1000" value="{st.session_state.car_pos}" disabled>
             </div>

@@ -96,7 +96,7 @@ def main():
         .slider-container {
             position: relative;
             height: 120px; /* Aumentato per dare più spazio tra slider e scritte */
-            margin-bottom: 50px; /* Aggiunto margine inferiore per slider con macchina rossa */
+            margin-bottom: 30px; /* Aggiunto margine inferiore per slider con macchina rossa */
         }
         .slider-container.first {
             margin-top: 50px; /* Aggiunto margine superiore per distanziare dal pulsante resetta gioco */

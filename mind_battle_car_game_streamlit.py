@@ -9,6 +9,7 @@ import io
 import requests
 import serial
 import serial.tools.list_ports
+import base64
 
 # Funzione per ottenere bit casuali da random.org
 def get_random_bits_from_random_org(num_bits):
@@ -70,24 +71,39 @@ def move_car(car_pos, distance):
         car_pos = 1000
     return car_pos
 
+# Funzione per convertire l'immagine in base64
+def image_to_base64(image):
+    buffered = io.BytesIO()
+    image.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode()
+
 # Funzione principale
 def main():
     st.title("Mind Battle Car Game")
 
-    # CSS per personalizzare i colori degli slider
+    # CSS per personalizzare i colori degli slider e nascondere i numeri
     st.markdown("""
         <style>
+        .stSlider > div > div > div > div {
+            display: none;
+        }
         .stSlider > div > div > div > div > div {
             background: red;
             border-radius: 50%;
             height: 14px;
             width: 14px;
         }
-        .stSlider > div > div > div > div > div:nth-child(2) {
-            background: green;
-            border-radius: 50%;
-            height: 14px;
-            width: 14px;
+        .slider-container {
+            position: relative;
+            height: 60px;
+        }
+        .car-image {
+            position: absolute;
+            top: -20px;
+            width: 50px;
+        }
+        .slider-container input[type=range] {
+            width: 100%;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -128,15 +144,10 @@ def main():
     if "widget_key_counter" not in st.session_state:
         st.session_state.widget_key_counter = 0
 
-    car_placeholder = st.empty()
-    car2_placeholder = st.empty()
-    car_progress = st.empty()
-    car2_progress = st.empty()
-
-    car_image = Image.open("car.png").resize((140, 140))
-    car2_image = Image.open("car2.png").resize((140, 140))
-    car_placeholder.image(car_image, width=140)
-    car2_placeholder.image(car2_image, width=140)
+    car_image = Image.open("car.png").resize((50, 50))
+    car2_image = Image.open("car2.png").resize((50, 50))
+    car_image_base64 = image_to_base64(car_image)
+    car2_image_base64 = image_to_base64(car2_image)
 
     if start_button:
         st.session_state.running = True
@@ -186,8 +197,19 @@ def main():
             st.session_state.car2_moves += 1
         
         st.session_state.widget_key_counter += 1  # Incrementa il contatore per ogni iterazione
-        car_progress.slider("Posizione Auto Rossa", min_value=0, max_value=1000, value=int(st.session_state.car_pos), key=f"slider1_{st.session_state.widget_key_counter}")
-        car2_progress.slider("Posizione Auto Verde", min_value=0, max_value=1000, value=int(st.session_state.car2_pos), key=f"slider2_{st.session_state.widget_key_counter}")
+        st.markdown(f"""
+            <div class="slider-container">
+                <img src="data:image/png;base64,{car_image_base64}" class="car-image" style="left:{st.session_state.car_pos / 10}%">
+                <input type="range" min="0" max="1000" value="{st.session_state.car_pos}" disabled>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown(f"""
+            <div class="slider-container">
+                <img src="data:image/png;base64,{car2_image_base64}" class="car-image" style="left:{st.session_state.car2_pos / 10}%">
+                <input type="range" min="0" max="1000" value="{st.session_state.car2_pos}" disabled>
+            </div>
+        """, unsafe_allow_html=True)
 
         time.sleep(0.1)
 

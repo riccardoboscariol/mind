@@ -136,8 +136,8 @@ def main():
         st.session_state.widget_key_counter += 1  # Incrementa il contatore per ogni iterazione
         
         # Aggiorna le immagini delle auto con la nuova posizione
-        car_placeholder.image(car_image, width=140, use_column_width=False, output_format='PNG', caption=f'Posizione Auto Rossa: {int(st.session_state.car_pos)}')
-        car2_placeholder.image(car2_image, width=140, use_column_width=False, output_format='PNG', caption=f'Posizione Auto Verde: {int(st.session_state.car2_pos)}')
+        car_placeholder.image(car_image, width=140, use_column_width=False, caption=f'Posizione Auto Rossa: {int(st.session_state.car_pos)}')
+        car2_placeholder.image(car2_image, width=140, use_column_width=False, caption=f'Posizione Auto Verde: {int(st.session_state.car2_pos)}')
 
         time.sleep(0.1)
 

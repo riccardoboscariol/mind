@@ -156,6 +156,9 @@ def main():
     if stop_button:
         st.session_state.running = False
 
+    car_placeholder = st.empty()
+    car2_placeholder = st.empty()
+
     while st.session_state.running:
         # Priorità: TrueRNG > Random.org > Generazione locale
         random_bits_1 = get_random_bits_from_truerng(5000)
@@ -197,14 +200,15 @@ def main():
             st.session_state.car2_moves += 1
         
         st.session_state.widget_key_counter += 1  # Incrementa il contatore per ogni iterazione
-        st.markdown(f"""
+        
+        car_placeholder.markdown(f"""
             <div class="slider-container">
                 <img src="data:image/png;base64,{car_image_base64}" class="car-image" style="left:{st.session_state.car_pos / 10}%">
                 <input type="range" min="0" max="1000" value="{st.session_state.car_pos}" disabled>
             </div>
         """, unsafe_allow_html=True)
         
-        st.markdown(f"""
+        car2_placeholder.markdown(f"""
             <div class="slider-container">
                 <img src="data:image/png;base64,{car2_image_base64}" class="car-image" style="left:{st.session_state.car2_pos / 10}%">
                 <input type="range" min="0" max="1000" value="{st.session_state.car2_pos}" disabled>

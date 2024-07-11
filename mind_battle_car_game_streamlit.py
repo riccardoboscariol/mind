@@ -98,6 +98,9 @@ def main():
             height: 120px; /* Aumentato per dare più spazio tra slider e scritte */
             margin-bottom: 50px; /* Aggiunto margine inferiore per slider con macchina rossa */
         }
+        .slider-container.first {
+            margin-top: 50px; /* Aggiunto margine superiore per distanziare dal pulsante resetta gioco */
+        }
         .car-image {
             position: absolute;
             top: -80px; /* Aumentato per ingrandire le immagini e lasciare spazio tra slider e scritte */
@@ -203,7 +206,7 @@ def main():
         st.session_state.widget_key_counter += 1  # Incrementa il contatore per ogni iterazione
         
         car_placeholder.markdown(f"""
-            <div class="slider-container" style="margin-bottom: 80px;">
+            <div class="slider-container first" style="margin-bottom: 80px;">
                 <img src="data:image/png;base64,{car_image_base64}" class="car-image" style="left:{st.session_state.car_pos / 10}%">
                 <input type="range" min="0" max="1000" value="{st.session_state.car_pos}" disabled>
             </div>

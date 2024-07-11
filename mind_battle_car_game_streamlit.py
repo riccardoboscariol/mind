@@ -95,12 +95,12 @@ def main():
         }
         .slider-container {
             position: relative;
-            height: 60px;
+            height: 120px; /* Aumentato per dare più spazio tra slider e scritte */
         }
         .car-image {
             position: absolute;
-            top: -20px;
-            width: 50px;
+            top: -80px; /* Aumentato per ingrandire le immagini e lasciare spazio tra slider e scritte */
+            width: 150px; /* Ingrandito di tre volte */
         }
         .slider-container input[type=range] {
             width: 100%;
@@ -144,8 +144,8 @@ def main():
     if "widget_key_counter" not in st.session_state:
         st.session_state.widget_key_counter = 0
 
-    car_image = Image.open("car.png").resize((50, 50))
-    car2_image = Image.open("car2.png").resize((50, 50))
+    car_image = Image.open("car.png").resize((150, 150))
+    car2_image = Image.open("car2.png").resize((150, 150))
     car_image_base64 = image_to_base64(car_image)
     car2_image_base64 = image_to_base64(car2_image)
 

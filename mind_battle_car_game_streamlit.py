@@ -162,7 +162,7 @@ def main():
             position: absolute;
             top: -80px;
             width: 150px;
-            left: 90%;
+            left: 85%;  /* Spostiamo la bandierina più a sinistra */
         }
         .slider-container input[type=range] {
             width: 100%;

@@ -160,9 +160,10 @@ def main():
         }
         .flag-image {
             position: absolute;
-            top: -40px;
-            width: 50px;
+            top: -50px;
+            width: 30px;
             left: 95%;
+            border: 2px solid red;  /* Aggiunto contorno rosso per la bandierina */
         }
         .slider-container input[type=range] {
             width: 100%;
@@ -224,7 +225,7 @@ def main():
 
     car_image = Image.open("car.png").resize((150, 150))  # Macchina rossa
     car2_image = Image.open("car2.png").resize((150, 150))  # Macchina verde
-    flag_image = Image.open("bandierina.png").resize((50, 50))  # Bandierina ridotta
+    flag_image = Image.open("bandierina.png").resize((30, 30))  # Bandierina ridotta
 
     car_image_base64 = image_to_base64(car_image)
     car2_image_base64 = image_to_base64(car2_image)

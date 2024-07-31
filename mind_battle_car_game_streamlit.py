@@ -54,8 +54,8 @@ def calculate_entropy(bits):
 
 def move_car(car_pos, distance):
     car_pos += distance
-    if car_pos > 950:  # Accorciamo la pista per lasciare spazio alla bandierina
-        car_pos = 950
+    if car_pos > 900:  # Accorciamo la pista per lasciare spazio alla bandierina
+        car_pos = 900
     return car_pos
 
 def image_to_base64(image):
@@ -158,6 +158,12 @@ def main():
             top: -80px;
             width: 150px;
         }
+        .flag-image {
+            position: absolute;
+            top: -40px;
+            width: 50px;
+            left: 95%;
+        }
         .slider-container input[type=range] {
             width: 100%;
         }
@@ -218,7 +224,7 @@ def main():
 
     car_image = Image.open("car.png").resize((150, 150))  # Macchina rossa
     car2_image = Image.open("car2.png").resize((150, 150))  # Macchina verde
-    flag_image = Image.open("bandierina.png").resize((100, 100))  # Bandierina
+    flag_image = Image.open("bandierina.png").resize((50, 50))  # Bandierina ridotta
 
     car_image_base64 = image_to_base64(car_image)
     car2_image_base64 = image_to_base64(car2_image)
@@ -238,7 +244,7 @@ def main():
             <div class="slider-container first">
                 <img src="data:image/png;base64,{car_image_base64}" class="car-image" style="left:{st.session_state.car_pos / 10}%">
                 <input type="range" min="0" max="1000" value="{st.session_state.car_pos}" disabled>
-                <img src="data:image/png;base64,{flag_image_base64}" class="car-image" style="left:95%">
+                <img src="data:image/png;base64,{flag_image_base64}" class="flag-image">
             </div>
         """, unsafe_allow_html=True)
 
@@ -246,16 +252,16 @@ def main():
             <div class="slider-container">
                 <img src="data:image/png;base64,{car2_image_base64}" class="car-image" style="left:{st.session_state.car2_pos / 10}%">
                 <input type="range" min="0" max="1000" value="{st.session_state.car2_pos}" disabled>
-                <img src="data:image/png;base64,{flag_image_base64}" class="car-image" style="left:95%">
+                <img src="data:image/png;base64,{flag_image_base64}" class="flag-image">
             </div>
         """, unsafe_allow_html=True)
 
     display_cars()
 
     def check_winner():
-        if st.session_state.car_pos >= 950:  # Accorciamo la pista per lasciare spazio alla bandierina
+        if st.session_state.car_pos >= 900:  # Accorciamo la pista per lasciare spazio alla bandierina
             return "Rossa"
-        elif st.session_state.car2_pos >= 950:  # Accorciamo la pista per lasciare spazio alla bandierina
+        elif st.session_state.car2_pos >= 900:  # Accorciamo la pista per lasciare spazio alla bandierina
             return "Verde"
         return None
 

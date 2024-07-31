@@ -3,59 +3,47 @@ import time
 import numpy as np
 import pandas as pd
 from PIL import Image
-from scipy.stats import mannwhitneyu, binomtest
-import matplotlib.pyplot as plt
-import io
 import requests
-import serial
-import serial.tools.list_ports
 import base64
+import io
 
-# Funzione per ottenere bit casuali da random.org
-def get_random_bits_from_random_org(num_bits):
-    url = "https://www.random.org/integers/"
-    params = {
-        "num": num_bits,
-        "min": 0,
-        "max": 1,
-        "col": 1,
-        "base": 10,
-        "format": "plain",
-        "rnd": "new"
-    }
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        random_bits = list(map(int, response.text.strip().split()))
-        return random_bits
-    except requests.RequestException as e:
-        if not st.session_state.get('random_org_warning_shown', False):
-            st.session_state['random_org_warning_shown'] = True
-            st.warning(f"Troppe richieste a random.org. Utilizzando la generazione locale. Dettagli: {e}")
-        return get_random_bits(num_bits)
+MAX_BATCH_SIZE = 1000  # Dimensione massima del batch per le richieste a random.org
+RETRY_LIMIT = 3  # Numero di tentativi per le richieste a random.org
 
-# Funzione per ottenere bit casuali localmente
-def get_random_bits(num_bits):
-    return np.random.randint(0, 2, num_bits).tolist()
+def get_random_bits_from_random_org(num_bits, api_key=None):
+    random_bits = []
+    attempts = 0
+    while num_bits > 0 and attempts < RETRY_LIMIT:
+        batch_size = min(num_bits, MAX_BATCH_SIZE)
+        url = "https://www.random.org/integers/"
+        params = {
+            "num": batch_size,
+            "min": 0,
+            "max": 1,
+            "col": 1,
+            "base": 10,
+            "format": "plain",
+            "rnd": "new"
+        }
+        headers = {"User-Agent": "streamlit_app"}
+        if api_key:
+            headers["Random-Org-API-Key"] = api_key.strip()  # Rimuove spazi bianchi
+        try:
+            response = requests.get(url, params=params, headers=headers, timeout=5)
+            response.raise_for_status()
+            random_bits.extend(list(map(int, response.text.strip().split())))
+            num_bits -= batch_size
+        except (requests.RequestException, ValueError) as e:
+            attempts += 1
+            if attempts >= RETRY_LIMIT:
+                st.warning(f"Errore durante l'accesso a random.org: {e}. Utilizzo numeri casuali locali.")
+                random_bits.extend(get_local_random_bits(num_bits))
+                break
+    return random_bits
 
-# Funzione per rilevare la chiavetta TrueRNG e leggere i numeri casuali
-def get_random_bits_from_truerng(num_bits):
-    ports = list(serial.tools.list_ports.comports())
-    for port in ports:
-        if 'TrueRNG' in port.description:
-            try:
-                ser = serial.Serial(port.device, 115200, timeout=1)
-                random_bits = []
-                while len(random_bits) < num_bits:
-                    random_bits.extend([int(bit) for bit in bin(int.from_bytes(ser.read(1), 'big'))[2:].zfill(8)])
-                ser.close()
-                return random_bits[:num_bits]
-            except Exception as e:
-                st.warning("Errore durante la lettura dalla chiavetta TrueRNG: {}. Utilizzando la generazione locale.".format(e))
-                return get_random_bits(num_bits)
-    return None
+def get_local_random_bits(num_bits):
+    return list(np.random.randint(0, 2, size=num_bits))
 
-# Funzione per calcolare l'entropia
 def calculate_entropy(bits):
     n = len(bits)
     counts = np.bincount(bits, minlength=2)
@@ -64,47 +52,111 @@ def calculate_entropy(bits):
     entropy = -np.sum(p * np.log2(p))
     return entropy
 
-# Funzione per spostare l'auto
 def move_car(car_pos, distance):
     car_pos += distance
-    if car_pos > 1000:  # Se l'auto esce dallo schermo, riportala all'inizio
-        car_pos = 1000
+    if car_pos > 950:  # Accorciamo la pista per lasciare spazio alla bandierina
+        car_pos = 950
     return car_pos
 
-# Funzione per convertire l'immagine in base64
 def image_to_base64(image):
     buffered = io.BytesIO()
     image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
-# Funzione principale
 def main():
-    st.title("Mind Battle Car Game")
+    st.set_page_config(page_title="Car Mind Race", layout="wide")
+    
+    if "language" not in st.session_state:
+        st.session_state.language = "Italiano"
+    
+    # Funzione per cambiare la lingua
+    def toggle_language():
+        if st.session_state.language == "Italiano":
+            st.session_state.language = "English"
+        else:
+            st.session_state.language = "Italiano"
 
-    # CSS per personalizzare i colori degli slider e nascondere i numeri
+    # Pulsante per cambiare la lingua
+    st.sidebar.button("Change Language", on_click=toggle_language)
+
+    if st.session_state.language == "Italiano":
+        title_text = "Car Mind Race"
+        instruction_text = """
+            Il primo giocatore sceglie la macchina verde e la cifra che vuole influenzare.
+            L'altro giocatore (o il PC) avrà la macchina rossa e l'altra cifra.
+            La macchina verde si muove quando l'entropia è a favore del suo bit scelto e inferiore al 5%.
+            La macchina rossa si muove quando l'entropia è a favore dell'altro bit e inferiore al 5%.
+            Ogni 0.1 secondi, esclusi i tempi di latenza per la versione gratuita senza API, vengono generati 2500 bit casuali per ciascuno slot.
+            Il programma utilizza random.org. L'entropia è calcolata usando la formula di Shannon.
+            La macchina si muove se l'entropia è inferiore al 5° percentile e la cifra scelta è più frequente.
+            La distanza di movimento è calcolata con la formula: Distanza = Moltiplicatore × (1 + ((percentile - entropia) / percentile)).
+            """
+        choose_bit_text = "Scegli il tuo bit per la macchina verde:"
+        start_race_text = "Avvia Gara"
+        stop_race_text = "Blocca Gara"
+        reset_game_text = "Resetta Gioco"
+        download_data_text = "Scarica Dati"
+        api_key_text = "Inserisci API Key per random.org"
+        new_race_text = "Nuova Gara"
+        end_game_text = "Termina Gioco"
+        reset_game_message = "Gioco resettato!"
+        error_message = "Errore nella generazione dei bit casuali. Fermato il gioco."
+        win_message = "Vince l'auto {}, complimenti!"
+        api_description_text = "Per garantire il corretto utilizzo, è consigliabile acquistare un piano per l'inserimento della chiave API da questo sito: [https://api.random.org/pricing](https://api.random.org/pricing)."
+    else:
+        title_text = "Car Mind Race"
+        instruction_text = """
+            The first player chooses the green car and the digit they want to influence.
+            The other player (or the PC) will have the red car and the other digit.
+            The green car moves when the entropy favors its chosen bit and is below 5%.
+            The red car moves when the entropy favors the other bit and is below 5%.
+            Every 0.1 seconds, excluding latency times for the free version without API, 2500 random bits are generated for each slot.
+            The program uses random.org. Entropy is calculated using Shannon's formula.
+            The car moves if the entropy is below the 5th percentile and the chosen digit is more frequent.
+            The movement distance is calculated with the formula: Distance = Multiplier × (1 + ((percentile - entropy) / percentile)).
+            """
+        choose_bit_text = "Choose your bit for the green car:"
+        start_race_text = "Start Race"
+        stop_race_text = "Stop Race"
+        reset_game_text = "Reset Game"
+        download_data_text = "Download Data"
+        api_key_text = "Enter API Key for random.org"
+        new_race_text = "New Race"
+        end_game_text = "End Game"
+        reset_game_message = "Game reset!"
+        error_message = "Error generating random bits. Game stopped."
+        win_message = "The {} car wins, congratulations!"
+        api_description_text = "To ensure proper use, it is advisable to purchase a plan for entering the API key from this site: [https://api.random.org/pricing](https://api.random.org/pricing)."
+
+    st.title(title_text)
+
     st.markdown("""
         <style>
         .stSlider > div > div > div > div {
-            display: none;
+            background: white;
+        }
+        .stSlider > div > div > div {
+            background: white;
         }
         .stSlider > div > div > div > div > div {
-            background: red;
+            background: white;
             border-radius: 50%;
             height: 14px;
             width: 14px;
         }
         .slider-container {
             position: relative;
-            height: 120px; /* Aumentato per dare più spazio tra slider e scritte */
-            margin-bottom: 30px; /* Aggiunto margine inferiore per slider con macchina rossa */
+            height: 120px;
+            margin-bottom: 50px;
         }
         .slider-container.first {
-            margin-top: 50px; /* Aggiunto margine superiore per distanziare dal pulsante resetta gioco */
+            margin-top: 50px;
+            margin-bottom: 40px;
         }
         .car-image {
             position: absolute;
-            top: -80px; /* Aumentato per ingrandire le immagini e lasciare spazio tra slider e scritte */
-            width: 150px; /* Ingrandito di tre volte */
+            top: -80px;
+            width: 150px;
         }
         .slider-container input[type=range] {
             width: 100%;
@@ -112,13 +164,10 @@ def main():
         </style>
         """, unsafe_allow_html=True)
 
-    start_button = st.button("Avvia Generazione", key="start")
-    stop_button = st.button("Blocca Generazione", key="stop")
-    download_button = st.button("Scarica Dati", key="download_data")
-    download_graph_button = st.button("Scarica Grafico", key="download_graph")
-    stats_button = st.button("Mostra Analisi Statistiche", key="stats")
-    reset_button = st.button("Resetta Gioco", key="reset")
-    
+    st.markdown(instruction_text)
+
+    if "player_choice" not in st.session_state:
+        st.session_state.player_choice = None
     if "car_pos" not in st.session_state:
         st.session_state.car_pos = 50
     if "car2_pos" not in st.session_state:
@@ -147,141 +196,76 @@ def main():
         st.session_state.running = False
     if "widget_key_counter" not in st.session_state:
         st.session_state.widget_key_counter = 0
+    if "show_end_buttons" not in st.session_state:
+        st.session_state.show_end_buttons = False
 
-    car_image = Image.open("car.png").resize((150, 150))
-    car2_image = Image.open("car2.png").resize((150, 150))
+    st.sidebar.title("Menu")
+    if st.session_state.player_choice is None:
+        start_button = st.sidebar.button(start_race_text, key="start_button", disabled=True)
+    else:
+        start_button = st.sidebar.button(start_race_text, key="start_button")
+    stop_button = st.sidebar.button(stop_race_text, key="stop_button")
+    api_key = st.sidebar.text_input(api_key_text, key="api_key")
+    
+    st.sidebar.markdown(api_description_text)
+
+    download_menu = st.sidebar.expander("Download")
+    with download_menu:
+        download_button = st.button(download_data_text, key="download_button")
+    reset_button = st.sidebar.button(reset_game_text, key="reset_button")
+
+    move_multiplier = st.sidebar.slider("Moltiplicatore di Movimento", min_value=1, max_value=100, value=20, key="move_multiplier")
+
+    car_image = Image.open("car.png").resize((150, 150))  # Macchina rossa
+    car2_image = Image.open("car2.png").resize((150, 150))  # Macchina verde
+    flag_image = Image.open("bandierina.png").resize((100, 100))  # Bandierina
+
     car_image_base64 = image_to_base64(car_image)
     car2_image_base64 = image_to_base64(car2_image)
+    flag_image_base64 = image_to_base64(flag_image)
 
-    if start_button:
-        st.session_state.running = True
-        st.session_state.car_start_time = time.time()
-
-    if stop_button:
-        st.session_state.running = False
+    st.write(choose_bit_text)
+    if st.button("Scegli 1", key="button1"):
+        st.session_state.player_choice = 1
+    if st.button("Scegli 0", key="button0"):
+        st.session_state.player_choice = 0
 
     car_placeholder = st.empty()
     car2_placeholder = st.empty()
 
-    while st.session_state.running:
-        # Priorità: TrueRNG > Random.org > Generazione locale
-        random_bits_1 = get_random_bits_from_truerng(5000)
-        random_bits_2 = get_random_bits_from_truerng(5000)
-        
-        if random_bits_1 is None:
-            random_bits_1 = get_random_bits_from_random_org(5000)
-        if random_bits_2 is None:
-            random_bits_2 = get_random_bits_from_random_org(5000)
-
-        if random_bits_1 is None:
-            random_bits_1 = get_random_bits(5000)
-        if random_bits_2 is None:
-            random_bits_2 = get_random_bits(5000)
-        
-        st.session_state.random_numbers_1.extend(random_bits_1)
-        st.session_state.random_numbers_2.extend(random_bits_2)
-        
-        st.session_state.data_for_excel_1.append(random_bits_1)
-        st.session_state.data_for_excel_2.append(random_bits_2)
-        
-        entropy_score_1 = calculate_entropy(random_bits_1)
-        entropy_score_2 = calculate_entropy(random_bits_2)
-        
-        st.session_state.data_for_condition_1.append(entropy_score_1)
-        st.session_state.data_for_condition_2.append(entropy_score_2)
-        
-        percentile_5_1 = np.percentile(st.session_state.data_for_condition_1, 5)
-        percentile_5_2 = np.percentile(st.session_state.data_for_condition_2, 5)
-        
-        if entropy_score_1 < percentile_5_1:
-            rarity_percentile = 1 - (entropy_score_1 / percentile_5_1)
-            st.session_state.car_pos = move_car(st.session_state.car_pos, 6 * (1 + (10 * rarity_percentile)))
-            st.session_state.car1_moves += 1
-        
-        if entropy_score_2 < percentile_5_2:
-            rarity_percentile = 1 - (entropy_score_2 / percentile_5_2)
-            st.session_state.car2_pos = move_car(st.session_state.car2_pos, 6 * (1 + (10 * rarity_percentile)))
-            st.session_state.car2_moves += 1
-        
-        st.session_state.widget_key_counter += 1  # Incrementa il contatore per ogni iterazione
-        
+    def display_cars():
         car_placeholder.markdown(f"""
-            <div class="slider-container first" style="margin-bottom: 80px;">
+            <div class="slider-container first">
                 <img src="data:image/png;base64,{car_image_base64}" class="car-image" style="left:{st.session_state.car_pos / 10}%">
                 <input type="range" min="0" max="1000" value="{st.session_state.car_pos}" disabled>
+                <img src="data:image/png;base64,{flag_image_base64}" class="car-image" style="left:95%">
             </div>
         """, unsafe_allow_html=True)
-        
+
         car2_placeholder.markdown(f"""
             <div class="slider-container">
                 <img src="data:image/png;base64,{car2_image_base64}" class="car-image" style="left:{st.session_state.car2_pos / 10}%">
                 <input type="range" min="0" max="1000" value="{st.session_state.car2_pos}" disabled>
+                <img src="data:image/png;base64,{flag_image_base64}" class="car-image" style="left:95%">
             </div>
         """, unsafe_allow_html=True)
 
-        time.sleep(0.1)
+    display_cars()
 
-    if download_button:
-        df = pd.DataFrame({
-            "Condizione 1": [''.join(map(str, row)) for row in st.session_state.data_for_excel_1],
-            "Condizione 2": [''.join(map(str, row)) for row in st.session_state.data_for_excel_2]
-        })
-        try:
-            df.to_excel("random_numbers.xlsx", index=False)
-            with open("random_numbers.xlsx", "rb") as file:
-                st.download_button(
-                    label="Scarica Dati",
-                    data=file,
-                    file_name="random_numbers.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-        except ImportError:
-            st.error("openpyxl non è installato. Installa openpyxl per scaricare i dati in formato Excel.")
+    def check_winner():
+        if st.session_state.car_pos >= 950:  # Accorciamo la pista per lasciare spazio alla bandierina
+            return "Rossa"
+        elif st.session_state.car2_pos >= 950:  # Accorciamo la pista per lasciare spazio alla bandierina
+            return "Verde"
+        return None
 
-    if download_graph_button:
-        fig, ax = plt.subplots(figsize=(8, 4))
-        if st.session_state.data_for_condition_1:
-            ax.hist(st.session_state.data_for_condition_1, bins=30, alpha=0.5, color='red', edgecolor='k')
-        if st.session_state.data_for_condition_2:
-            ax.hist(st.session_state.data_for_condition_2, bins=30, alpha=0.5, color='green', edgecolor='k')
-        ax.set_title('Distribuzione della Rarità degli Slot')
-        ax.set_xlabel('Rarità')
-        ax.set_ylabel('Frequenza')
-        buf = io.BytesIO()
-        fig.savefig(buf, format='png')
-        buf.seek(0)
-        st.download_button(label="Scarica Grafico", data=buf, file_name="rarity_distribution.png", mime="image/png")
-    
-    if stats_button:
-        if st.session_state.data_for_condition_1 and st.session_state.data_for_condition_2:
-            u_stat, p_value = mannwhitneyu(st.session_state.data_for_condition_1, st.session_state.data_for_condition_2, alternative='two-sided')
-            mann_whitney_text = f"Mann-Whitney U test: U-stat = {u_stat:.4f}, p-value = {p_value:.4f}"
-        else:
-            mann_whitney_text = "Mann-Whitney U test: Dati insufficienti"
+    def end_race(winner):
+        st.session_state.running = False
+        st.session_state.show_end_buttons = True
+        st.success(win_message.format(winner))
+        show_end_buttons()
 
-        total_moves = st.session_state.car1_moves + st.session_state.car2_moves
-        if total_moves > 0:
-            binom_p_value_moves = binomtest(st.session_state.car1_moves, total_moves, alternative='two-sided').pvalue
-            binom_text_moves = f"Test Binomiale (numero di spostamenti): p-value = {binom_p_value_moves:.4f}"
-        else:
-            binom_text_moves = "Test Binomiale (numero di spostamenti): Dati insufficienti"
-
-        if st.session_state.random_numbers_1:
-            binom_p_value_1 = binomtest(np.sum(st.session_state.random_numbers_1), len(st.session_state.random_numbers_1), alternative='two-sided').pvalue
-            binom_text_1 = f"Test Binomiale (cifre auto verde): p-value = {binom_p_value_1:.4f}"
-        else:
-            binom_text_1 = "Test Binomiale (cifre auto verde): Dati insufficienti"
-
-        if st.session_state.random_numbers_2:
-            binom_p_value_2 = binomtest(np.sum(st.session_state.random_numbers_2), len(st.session_state.random_numbers_2), alternative='two-sided').pvalue
-            binom_text_2 = f"Test Binomiale (cifre auto rossa): p-value = {binom_p_value_2:.4f}"
-        else:
-            binom_text_2 = "Test Binomiale (cifre auto rossa): Dati insufficienti"
-
-        stats_text = mann_whitney_text + "\n" + binom_text_moves + "\n" + binom_text_1 + "\n" + binom_text_2
-        st.write(stats_text)
-    
-    if reset_button:
+    def reset_game():
         st.session_state.car_pos = 50
         st.session_state.car2_pos = 50
         st.session_state.car1_moves = 0
@@ -292,9 +276,111 @@ def main():
         st.session_state.data_for_condition_2 = []
         st.session_state.random_numbers_1 = []
         st.session_state.random_numbers_2 = []
-        st.session_state.widget_key_counter = 0  # Reset del contatore di chiavi
-        st.write("Gioco resettato!")
-        st.session_state['random_org_warning_shown'] = False  # Reset dell'avviso di errore per random.org
+        st.session_state.widget_key_counter += 1
+        st.session_state.player_choice = None
+        st.session_state.running = False
+        st.session_state.show_end_buttons = False
+        st.write(reset_game_message)
+        display_cars()
+
+    def show_end_buttons():
+        key_suffix = st.session_state.widget_key_counter
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button(new_race_text, key=f"new_race_button_{key_suffix}"):
+                reset_game()
+        with col2:
+            if st.button(end_game_text, key=f"end_game_button_{key_suffix}"):
+                st.stop()
+
+    if start_button and st.session_state.player_choice is not None:
+        st.session_state.running = True
+        st.session_state.car_start_time = time.time()
+        st.session_state.show_end_buttons = False
+
+    if stop_button:
+        st.session_state.running = False
+
+    try:
+        while st.session_state.running:
+            start_time = time.time()
+
+            # Ottieni numeri casuali da random.org
+            random_bits_1 = get_random_bits_from_random_org(2500, api_key)
+            random_bits_2 = get_random_bits_from_random_org(2500, api_key)
+
+            if random_bits_1 is None or random_bits_2 is None:
+                st.session_state.running = False
+                st.write(error_message)
+                show_end_buttons()
+                break
+
+            st.session_state.random_numbers_1.extend(random_bits_1)
+            st.session_state.random_numbers_2.extend(random_bits_2)
+            
+            st.session_state.data_for_excel_1.append(random_bits_1)
+            st.session_state.data_for_excel_2.append(random_bits_2)
+            
+            entropy_score_1 = calculate_entropy(random_bits_1)
+            entropy_score_2 = calculate_entropy(random_bits_2)
+            
+            st.session_state.data_for_condition_1.append(entropy_score_1)
+            st.session_state.data_for_condition_2.append(entropy_score_2)
+            
+            percentile_5_1 = np.percentile(st.session_state.data_for_condition_1, 5)
+            percentile_5_2 = np.percentile(st.session_state.data_for_condition_2, 5)
+
+            count_1 = sum(random_bits_1)
+            count_0 = len(random_bits_1) - count_1
+
+            if entropy_score_1 < percentile_5_1:
+                if st.session_state.player_choice == 1 and count_1 > count_0:
+                    st.session_state.car2_pos = move_car(st.session_state.car2_pos, move_multiplier * (1 + ((percentile_5_1 - entropy_score_1) / percentile_5_1)))
+                    st.session_state.car1_moves += 1
+                elif st.session_state.player_choice == 0 and count_0 > count_1:
+                    st.session_state.car2_pos = move_car(st.session_state.car2_pos, move_multiplier * (1 + ((percentile_5_1 - entropy_score_1) / percentile_5_1)))
+                    st.session_state.car1_moves += 1
+
+            if entropy_score_2 < percentile_5_2:
+                if st.session_state.player_choice == 1 and count_0 > count_1:
+                    st.session_state.car_pos = move_car(st.session_state.car_pos, move_multiplier * (1 + ((percentile_5_2 - entropy_score_2) / percentile_5_2)))
+                    st.session_state.car2_moves += 1
+                elif st.session_state.player_choice == 0 and count_1 > count_0:
+                    st.session_state.car_pos = move_car(st.session_state.car_pos, move_multiplier * (1 + ((percentile_5_2 - entropy_score_2) / percentile_5_2)))
+                    st.session_state.car2_moves += 1
+
+            display_cars()
+
+            winner = check_winner()
+            if winner:
+                end_race(winner)
+                break
+
+            time_elapsed = time.time() - start_time
+            time.sleep(max(0.1 - time_elapsed, 0))
+
+        if st.session_state.show_end_buttons:
+            show_end_buttons()
+
+    except Exception as e:
+        st.error(f"Si è verificato un errore: {e}")
+
+    if download_button:
+        df = pd.DataFrame({
+            "Condizione 1": [''.join(map(str, row)) for row in st.session_state.data_for_excel_1],
+            "Condizione 2": [''.join(map(str, row)) for row in st.session_state.data_for_excel_2]
+        })
+        df.to_excel("random_numbers.xlsx", index=False)
+        with open("random_numbers.xlsx", "rb") as file:
+            st.download_button(
+                label=download_data_text,
+                data=file,
+                file_name="random_numbers.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+    if reset_button:
+        reset_game()
 
 if __name__ == "__main__":
     main()

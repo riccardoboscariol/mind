@@ -160,7 +160,7 @@ def main():
         }
         .flag-image {
             position: absolute;
-            top: -50px;
+            top: 10px;
             width: 30px;
             left: 90%;
         }
@@ -238,14 +238,13 @@ def main():
 
     car_placeholder = st.empty()
     car2_placeholder = st.empty()
-    flag_placeholder_1 = st.empty()
-    flag_placeholder_2 = st.empty()
 
     def display_cars():
         car_placeholder.markdown(f"""
             <div class="slider-container first">
                 <img src="data:image/png;base64,{car_image_base64}" class="car-image" style="left:{st.session_state.car_pos / 10}%">
                 <input type="range" min="0" max="1000" value="{st.session_state.car_pos}" disabled>
+                <img src="data:image/png;base64,{flag_image_base64}" class="flag-image">
             </div>
         """, unsafe_allow_html=True)
 
@@ -253,18 +252,7 @@ def main():
             <div class="slider-container">
                 <img src="data:image/png;base64,{car2_image_base64}" class="car-image" style="left:{st.session_state.car2_pos / 10}%">
                 <input type="range" min="0" max="1000" value="{st.session_state.car2_pos}" disabled>
-            </div>
-        """, unsafe_allow_html=True)
-
-        flag_placeholder_1.markdown(f"""
-            <div style="position: relative; height: 50px;">
-                <img src="data:image/png;base64,{flag_image_base64}" style="position: absolute; top: -20px; left: 90%;">
-            </div>
-        """, unsafe_allow_html=True)
-
-        flag_placeholder_2.markdown(f"""
-            <div style="position: relative; height: 50px;">
-                <img src="data:image/png;base64,{flag_image_base64}" style="position: absolute; top: -20px; left: 90%;">
+                <img src="data:image/png;base64,{flag_image_base64}" class="flag-image">
             </div>
         """, unsafe_allow_html=True)
 
@@ -402,4 +390,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

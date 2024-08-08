@@ -173,8 +173,8 @@ def main():
         }}
         .number-image {{
             position: absolute;
-            top: calc(30px - 1px);  /* Adjust position: 1px lower */
-            left: calc(73px - 9px); /* Adjust position: 7px to the left */
+            top: calc(30px - 2px);  /* Adjust position: 1px lower */
+            left: calc(73px - 15px); /* Adjust position: 7px to the left */
             transform: translateX(-50%); /* Center horizontally */
             width: calc(110px + 10px);  /* Width of the number images slightly larger */
             z-index: 10;  /* Ensure numbers are below cars */

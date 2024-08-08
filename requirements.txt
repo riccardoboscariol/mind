@@ -1,9 +1,11 @@
 streamlit
-pandas
 numpy
-scipy
+pandas
 requests
-matplotlib
+scipy
+Pillow
 pyserial
-pillow
+pygame
+pydub
 openpyxl
+rdoclient

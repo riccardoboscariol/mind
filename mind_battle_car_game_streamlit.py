@@ -66,15 +66,6 @@ def image_to_base64(image):
 def main():
     st.set_page_config(page_title="Car Mind Race", layout="wide")
 
-    # Logo dell'applicazione
-    logo_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "logo_A.png")
-    logo_image = Image.open(logo_path).resize((125, 70))  # Logo ridimensionato a 125x70 pixel
-    logo_link = "http://socrg.org/"
-    st.markdown(
-        f'<a href="{logo_link}" target="_blank"><img src="data:image/png;base64,{image_to_base64(logo_image)}" alt="Logo" style="display: block; margin-left: auto; margin-right: auto; margin-top: -40px; margin-bottom: -40px;"/></a>',
-        unsafe_allow_html=True
-    )
-
     if "language" not in st.session_state:
         st.session_state.language = "Italiano"
 
@@ -172,8 +163,9 @@ def main():
         }
         .number-image {
             position: absolute;
-            top: -40px; /* Aggiustamento per posizionare il numero sopra l'auto */
-            width: 22px; /* Dimensione delle immagini numeriche */
+            top: -38px; /* Aggiustamento per posizionare il numero sopra l'auto */
+            left: 10px; /* Aggiustamento per posizionare il numero a destra dell'auto */
+            width: 66px; /* Dimensione delle immagini numeriche */
         }
         .flag-image {
             position: absolute;
@@ -275,11 +267,11 @@ def main():
     car2_image = Image.open(os.path.join(image_dir, "car2.png")).resize((150, 150))  # Macchina verde
     flag_image = Image.open(os.path.join(image_dir, "bandierina.png")).resize((150, 150))  # Bandierina della stessa dimensione delle macchine
 
-    # Carica le immagini per i numeri e ridimensiona ulteriormente a 20x20 pixel
-    number_0_green_image = Image.open(os.path.join(image_dir, "0green.png")).resize((20, 20))
-    number_1_green_image = Image.open(os.path.join(image_dir, "1green.png")).resize((20, 20))
-    number_0_red_image = Image.open(os.path.join(image_dir, "0red.png")).resize((20, 20))
-    number_1_red_image = Image.open(os.path.join(image_dir, "1red.png")).resize((20, 20))
+    # Carica le immagini per i numeri e ridimensiona ulteriormente a 60x60 pixel
+    number_0_green_image = Image.open(os.path.join(image_dir, "0green.png")).resize((60, 60))
+    number_1_green_image = Image.open(os.path.join(image_dir, "1green.png")).resize((60, 60))
+    number_0_red_image = Image.open(os.path.join(image_dir, "0red.png")).resize((60, 60))
+    number_1_red_image = Image.open(os.path.join(image_dir, "1red.png")).resize((60, 60))
 
     st.write(choose_bit_text)
 
@@ -339,7 +331,7 @@ def main():
         car_placeholder.markdown(f"""
             <div class="slider-container first">
                 <img src="data:image/png;base64,{car_image_base64}" class="car-image" style="left:{st.session_state.car_pos / 10}%">
-                <img src="data:image/png;base64,{red_car_number_base64}" class="number-image" style="left:{st.session_state.car_pos / 10 - 1.5}%">
+                <img src="data:image/png;base64,{red_car_number_base64}" class="number-image" style="left:{st.session_state.car_pos / 10 + 10}px; top:-38px;">
                 <input type="range" min="0" max="1000" value="{st.session_state.car_pos}" disabled>
                 <img src="data:image/png;base64,{flag_image_base64}" class="flag-image">
             </div>
@@ -348,7 +340,7 @@ def main():
         car2_placeholder.markdown(f"""
             <div class="slider-container">
                 <img src="data:image/png;base64,{car2_image_base64}" class="car-image" style="left:{st.session_state.car2_pos / 10}%">
-                <img src="data:image/png;base64,{green_car_number_base64}" class="number-image" style="left:{st.session_state.car2_pos / 10 - 1.5}%">
+                <img src="data:image/png;base64,{green_car_number_base64}" class="number-image" style="left:{st.session_state.car2_pos / 10 + 10}px; top:-38px;">
                 <input type="range" min="0" max="1000" value="{st.session_state.car2_pos}" disabled>
                 <img src="data:image/png;base64,{flag_image_base64}" class="flag-image">
             </div>
@@ -492,3 +484,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

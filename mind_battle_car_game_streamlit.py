@@ -72,29 +72,27 @@ def configure_google_sheets(sheet_name):
     credentials_info = json.loads(st.secrets["google_sheets"]["credentials_json"])
     credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_info, scope)
     client = gspread.authorize(credentials)
-    sheet = client.open(sheet_name)
-    sheet1 = sheet.sheet1  # First sheet
-    sheet2 = sheet.worksheet("Foglio2")  # Second sheet
+    sheet1 = client.open(sheet_name).sheet1  # Open the first sheet
+    sheet2 = client.open(sheet_name).worksheet("Foglio2")  # Open the second sheet
     return sheet1, sheet2
 
 def save_race_data(sheet, race_data):
     """Save race data to Google Sheets."""
     try:
         sheet.append_row(race_data)
-        st.write("Data successfully saved to Google Sheets")
+        st.write("Dati salvati con successo su Google Sheets")
     except Exception as e:
-        st.error(f"Error saving data to Google Sheets: {e}")
+        st.error(f"Errore durante il salvataggio su Google Sheets: {e}")
 
-def save_random_bits(sheet, bits_red, bits_green):
-    """Save the random bits to the second sheet."""
+def save_random_bits(sheet, random_bits_1, random_bits_2):
+    """Save random bits for both cars to the second sheet in Google Sheets."""
     try:
-        # Combine bits into a string and save them to separate rows
-        sheet.append_row(["Red Car Bits"] + bits_red)
-        sheet.append_row(["Green Car Bits"] + bits_green)
-        sheet.append_row([])  # Add an empty row to separate races
-        st.write("Random bits successfully saved to Google Sheets")
+        sheet.append_row(["Red Car"] + random_bits_1)
+        sheet.append_row(["Green Car"] + random_bits_2)
+        sheet.append_row([])  # Add an empty row between races
+        st.write("Bit salvati con successo su Foglio2 di Google Sheets")
     except Exception as e:
-        st.error(f"Error saving random bits to Google Sheets: {e}")
+        st.error(f"Errore durante il salvataggio dei bit su Foglio2: {e}")
 
 def main():
     st.set_page_config(page_title="Car Mind Race", layout="wide")
@@ -120,16 +118,6 @@ def main():
 
     if st.session_state.language == "Italiano":
         title_text = "Car Mind Race"
-        instruction_text = """
-            Il primo giocatore sceglie la macchina verde e la cifra che vuole influenzare.
-            L'altro giocatore (o il PC) avrà la macchina rossa e l'altra cifra.
-            La macchina verde si muove quando l'entropia è a favore del suo bit scelto e inferiore al 5%.
-            La macchina rossa si muove quando l'entropia è a favore dell'altro bit e inferiore al 5%.
-            Ogni 0.5 secondi, esclusi i tempi di latenza per la versione gratuita senza API, vengono generati 1000 bit casuali per ciascuno slot.
-            Il programma utilizza random.org. L'entropia è calcolata usando la formula di Shannon.
-            La macchina si muove se l'entropia è inferiore al 5° percentile e la cifra scelta è più frequente.
-            La distanza di movimento è calcolata con la formula: Distanza = Moltiplicatore × (1 + ((percentile - entropia) / percentile)).
-            """
         choose_bit_text = "Scegli il tuo bit per la macchina verde. Puoi scegliere anche la 'velocità' di movimento indicando il punteggio nello slider 'Moltiplicatore di Movimento'."
         start_race_text = "Avvia Gara"
         stop_race_text = "Blocca Gara"
@@ -144,16 +132,6 @@ def main():
         move_multiplier_text = "Moltiplicatore di Movimento"
     else:
         title_text = "Car Mind Race"
-        instruction_text = """
-            The first player chooses the green car and the digit they want to influence.
-            The other player (or the PC) will have the red car and the other digit.
-            The green car moves when the entropy favors its chosen bit and is below 5%.
-            The red car moves when the entropy favors the other bit and is below 5%.
-            Every 0.5 seconds, excluding latency times for the free version without API, 1000 random bits are generated for each slot.
-            The program uses random.org. Entropy is calculated using Shannon's formula.
-            The car moves if the entropy is below the 5th percentile and the chosen digit is more frequent.
-            The movement distance is calculated with the formula: Distance = Multiplier × (1 + ((percentile - entropy) / percentile)).
-            """
         choose_bit_text = "Choose your bit for the green car. You can also choose the 'speed' of movement by setting the score on the 'Movement Multiplier' slider."
         start_race_text = "Start Race"
         stop_race_text = "Stop Race"
@@ -284,7 +262,7 @@ def main():
         unsafe_allow_html=True,
     )
 
-    st.markdown(instruction_text)
+    st.markdown(choose_bit_text)
 
     if "player_choice" not in st.session_state:
         st.session_state.player_choice = None
@@ -341,7 +319,6 @@ def main():
         download_button = st.button(download_data_text, key="download_button")
     reset_button = st.sidebar.button(reset_game_text, key="reset_button")
 
-    # Default move multiplier set to 50 instead of 20
     move_multiplier = st.sidebar.slider(
         move_multiplier_text, min_value=1, max_value=100, value=50, key="move_multiplier"
     )
@@ -353,7 +330,6 @@ def main():
         (150, 150)
     )  # Flag of the same size as the cars
 
-    # Load images for numbers and resize further to 120x120 pixels
     number_0_green_image = Image.open(os.path.join(image_dir, "0green.png")).resize(
         (120, 120)
     )  # Slightly larger
@@ -369,25 +345,17 @@ def main():
 
     st.write(choose_bit_text)
 
-    # Initialize number images with default values
     green_car_number_image = number_0_green_image
     red_car_number_image = number_1_red_image
 
-    # Determine which number image to display for each car
     col1, col2 = st.columns([1, 1])
     with col1:
         button1 = st.button(
-            "Scegli 1" if st.session_state.language == "Italiano" else "Choose 1", 
-            key="button1", 
-            use_container_width=True, 
-            help="Scegli il bit 1" if st.session_state.language == "Italiano" else "Choose bit 1"
+            "Scegli 1", key="button1", use_container_width=True, help="Scegli il bit 1"
         )
     with col2:
         button0 = st.button(
-            "Scegli 0" if st.session_state.language == "Italiano" else "Choose 0", 
-            key="button0", 
-            use_container_width=True, 
-            help="Scegli il bit 0" if st.session_state.language == "Italiano" else "Choose bit 0"
+            "Scegli 0", key="button0", use_container_width=True, help="Scegli il bit 0"
         )
 
     if button1:
@@ -404,12 +372,10 @@ def main():
         st.session_state.button0_active = True
         st.session_state.button1_active = False
 
-    # Assign the chosen images if a choice has been made
     if st.session_state.player_choice is not None:
         green_car_number_image = st.session_state.green_car_number_image
         red_car_number_image = st.session_state.red_car_number_image
 
-    # Active button style
     active_button_style = """
     <style>
     div.stButton > button[title="Scegli il bit 1"] { background-color: #90EE90; }
@@ -489,11 +455,11 @@ def main():
             winner,
             time.time() - st.session_state.car_start_time,
             st.session_state.api_key != "",
-            st.session_state.move_multiplier  # Save the movement multiplier value
+            st.session_state.move_multiplier
         ]
         save_race_data(sheet1, race_data)
 
-        # Save random bits to the second sheet
+        # Save random bits to Google Sheets (Foglio2)
         save_random_bits(sheet2, st.session_state.random_numbers_1, st.session_state.random_numbers_2)
 
     def reset_game():
@@ -536,7 +502,6 @@ def main():
         while st.session_state.running:
             start_time = time.time()
 
-            # Get random numbers from random.org
             random_bits_1, random_org_success_1 = get_random_bits_from_random_org(
                 1000, client
             )
@@ -545,7 +510,6 @@ def main():
             )
 
             if not random_org_success_1 and not random_org_success_2:
-                # Only show warning once if random.org fails
                 if not st.session_state.warned_random_org:
                     st.session_state.warned_random_org = True
 
@@ -613,11 +577,9 @@ def main():
             show_retry_popup()
 
     except Exception as e:
-        # Silence the error to avoid it appearing on the frontend
         st.error(f"Error during race execution: {e}")
 
     if download_button:
-        # Create DataFrame with "Green Car" and "Red Car" columns
         df = pd.DataFrame(
             {
                 "Green Car": [
@@ -644,4 +606,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

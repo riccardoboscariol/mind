@@ -7,6 +7,9 @@ import base64
 import io
 import os
 from rdoclient import RandomOrgClient
+import json
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 MAX_BATCH_SIZE = 1000  # Maximum batch size for requests to random.org
 RETRY_LIMIT = 3  # Number of retry attempts for random.org requests
@@ -62,6 +65,23 @@ def image_to_base64(image):
     buffered = io.BytesIO()
     image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
+
+def configure_google_sheets(sheet_name):
+    """Configure Google Sheets using credentials from Streamlit Secrets."""
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    credentials_info = json.loads(st.secrets["google_sheets"]["credentials_json"])
+    credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_info, scope)
+    client = gspread.authorize(credentials)
+    sheet = client.open(sheet_name).sheet1  # Open the first sheet
+    return sheet
+
+def save_race_data(sheet, race_data):
+    """Save race data to Google Sheets."""
+    try:
+        sheet.append_row(race_data)
+        st.write("Dati salvati con successo su Google Sheets")
+    except Exception as e:
+        st.error(f"Errore durante il salvataggio su Google Sheets: {e}")
 
 def main():
     st.set_page_config(page_title="Car Mind Race", layout="wide")
@@ -137,7 +157,6 @@ def main():
     st.title(title_text)
 
     # Generate a unique query string to prevent caching
-    import time
     unique_query_string = f"?v={int(time.time())}"
 
     st.markdown(
@@ -442,6 +461,18 @@ def main():
         st.success(win_message.format(winner))
         show_retry_popup()
 
+        # Save race data to Google Sheets
+        race_data = [
+            st.session_state.language,
+            st.session_state.player_choice,
+            st.session_state.car_pos,
+            st.session_state.car2_pos,
+            winner,
+            time.time() - st.session_state.car_start_time,
+            st.session_state.api_key != ""
+        ]
+        save_race_data(sheet, race_data)
+
     def reset_game():
         """Reset the game state."""
         st.session_state.car_pos = 50
@@ -466,6 +497,10 @@ def main():
         if st.session_state.show_retry_popup:
             if st.button(retry_text, key=f"retry_button_{st.session_state.widget_key_counter}"):
                 reset_game()
+
+    # Connect to Google Sheets
+    sheet_name = "test"
+    sheet = configure_google_sheets(sheet_name)
 
     if start_button and st.session_state.player_choice is not None:
         st.session_state.running = True
@@ -556,8 +591,8 @@ def main():
             show_retry_popup()
 
     except Exception as e:
-        # Silenziare l'errore per evitare che compaia nel frontend
-        pass
+        # Silence the error to avoid it appearing on the frontend
+        st.error(f"Error during race execution: {e}")
 
     if download_button:
         # Create DataFrame with "Green Car" and "Red Car" columns
@@ -584,7 +619,6 @@ def main():
 
     if reset_button:
         reset_game()
-
 
 if __name__ == "__main__":
     main()

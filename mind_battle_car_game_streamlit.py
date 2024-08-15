@@ -88,7 +88,7 @@ def save_race_data(sheet, race_data):
 def save_random_bits(sheet, bits_red, bits_green):
     """Save the random bits to the second sheet."""
     try:
-        # Convert bits to strings and append them as separate rows
+        # Combine bits into a string and save them to separate rows
         sheet.append_row(["Red Car Bits"] + bits_red)
         sheet.append_row(["Green Car Bits"] + bits_green)
         sheet.append_row([])  # Add an empty row to separate races
@@ -168,9 +168,6 @@ def main():
         move_multiplier_text = "Movement Multiplier"
 
     st.title(title_text)
-
-    # Generate a unique query string to prevent caching
-    unique_query_string = f"?v={int(time.time())}"
 
     st.markdown(instruction_text)
 

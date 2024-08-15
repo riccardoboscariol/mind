@@ -469,7 +469,8 @@ def main():
             st.session_state.car2_pos,
             winner,
             time.time() - st.session_state.car_start_time,
-            st.session_state.api_key != ""
+            st.session_state.api_key != "",
+            st.session_state.move_multiplier,  # Adding move multiplier to race data
         ]
         save_race_data(sheet, race_data)
 
@@ -622,3 +623,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -72,30 +72,36 @@ def configure_google_sheets(sheet_name):
     credentials_info = json.loads(st.secrets["google_sheets"]["credentials_json"])
     credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_info, scope)
     client = gspread.authorize(credentials)
-    sheet = client.open(sheet_name).sheet1  # Open the first sheet
+    sheet = client.open(sheet_name)
     return sheet
 
 def save_race_data(sheet, race_data):
     """Save race data to Google Sheets."""
     try:
-        # Convert language and color to English
-        if race_data[0] == "Italiano":
-            race_data[0] = "Italian"
-        if race_data[4] == "Verde":
-            race_data[4] = "Green"
-        elif race_data[4] == "Rossa":
-            race_data[4] = "Red"
-
-        sheet.append_row(race_data)
-        st.write("Data successfully saved to Google Sheets")
+        sheet.sheet1.append_row(race_data)
+        st.write("Dati salvati con successo su Google Sheets")
     except Exception as e:
-        st.error(f"Error saving to Google Sheets: {e}")
+        st.error(f"Errore durante il salvataggio su Google Sheets: {e}")
+
+def save_random_bits(sheet, red_bits, green_bits):
+    """Save random bits for both cars to a second sheet in Google Sheets."""
+    try:
+        worksheet = sheet.get_worksheet(1)  # Get the second sheet
+        if not worksheet:
+            worksheet = sheet.add_worksheet(title="Random Bits", rows="1000", cols="2")
+
+        worksheet.append_row(["".join(map(str, red_bits))])
+        worksheet.append_row(["".join(map(str, green_bits))])
+        worksheet.append_row([])  # Empty row as separator
+        st.write("Bit casuali salvati con successo su Google Sheets")
+    except Exception as e:
+        st.error(f"Errore durante il salvataggio dei bit casuali su Google Sheets: {e}")
 
 def main():
     st.set_page_config(page_title="Car Mind Race", layout="wide")
 
     if "language" not in st.session_state:
-        st.session_state.language = "Italian"
+        st.session_state.language = "Italiano"
 
     if "api_key" not in st.session_state:
         st.session_state.api_key = ""
@@ -105,15 +111,15 @@ def main():
 
     # Function to change language
     def toggle_language():
-        if st.session_state.language == "Italian":
+        if st.session_state.language == "Italiano":
             st.session_state.language = "English"
         else:
-            st.session_state.language = "Italian"
+            st.session_state.language = "Italiano"
 
     # Button to change language
     st.sidebar.button("Change Language", on_click=toggle_language)
 
-    if st.session_state.language == "Italian":
+    if st.session_state.language == "Italiano":
         title_text = "Car Mind Race"
         instruction_text = """
             Il primo giocatore sceglie la macchina verde e la cifra che vuole influenzare.
@@ -272,7 +278,7 @@ def main():
             background-color: #ddd; /* Color when selected */
         }}
         .stException {{
-            display: none;  /* Hide errors */
+            display: none;  /* Nascondi errori */
         }}
         </style>
         """,
@@ -372,11 +378,11 @@ def main():
     col1, col2 = st.columns([1, 1])
     with col1:
         button1 = st.button(
-            "Choose 1", key="button1", use_container_width=True, help="Choose bit 1"
+            "Scegli 1" if st.session_state.language == "Italiano" else "Choose 1", key="button1", use_container_width=True, help="Scegli il bit 1"
         )
     with col2:
         button0 = st.button(
-            "Choose 0", key="button0", use_container_width=True, help="Choose bit 0"
+            "Scegli 0" if st.session_state.language == "Italiano" else "Choose 0", key="button0", use_container_width=True, help="Scegli il bit 0"
         )
 
     if button1:
@@ -401,8 +407,8 @@ def main():
     # Active button style
     active_button_style = """
     <style>
-    div.stButton > button[title="Choose bit 1"] { background-color: #90EE90; }
-    div.stButton > button[title="Choose bit 0"] { background-color: #FFB6C1; }
+    div.stButton > button[title="Scegli il bit 1"] { background-color: #90EE90; }
+    div.stButton > button[title="Scegli il bit 0"] { background-color: #FFB6C1; }
     .number-image.show {
         display: block;
     }
@@ -471,16 +477,19 @@ def main():
 
         # Save race data to Google Sheets
         race_data = [
-            st.session_state.language,
+            st.session_state.language if st.session_state.language != "Italiano" else "Italian",
             st.session_state.player_choice,
             st.session_state.car_pos,
             st.session_state.car2_pos,
             winner,
             time.time() - st.session_state.car_start_time,
             st.session_state.api_key != "",
-            st.session_state.move_multiplier,
+            move_multiplier
         ]
         save_race_data(sheet, race_data)
+
+        # Save random bits to the second sheet
+        save_random_bits(sheet, st.session_state.random_numbers_1, st.session_state.random_numbers_2)
 
     def reset_game():
         """Reset the game state."""
@@ -558,14 +567,14 @@ def main():
                 if st.session_state.player_choice == 1 and count_1 > count_0:
                     st.session_state.car2_pos = move_car(
                         st.session_state.car2_pos,
-                        st.session_state.move_multiplier
+                        move_multiplier
                         * (1 + ((percentile_5_1 - entropy_score_1) / percentile_5_1)),
                     )
                     st.session_state.car1_moves += 1
                 elif st.session_state.player_choice == 0 and count_0 > count_1:
                     st.session_state.car2_pos = move_car(
                         st.session_state.car2_pos,
-                        st.session_state.move_multiplier
+                        move_multiplier
                         * (1 + ((percentile_5_1 - entropy_score_1) / percentile_5_1)),
                     )
                     st.session_state.car1_moves += 1
@@ -574,14 +583,14 @@ def main():
                 if st.session_state.player_choice == 1 and count_0 > count_1:
                     st.session_state.car_pos = move_car(
                         st.session_state.car_pos,
-                        st.session_state.move_multiplier
+                        move_multiplier
                         * (1 + ((percentile_5_2 - entropy_score_2) / percentile_5_2)),
                     )
                     st.session_state.car2_moves += 1
                 elif st.session_state.player_choice == 0 and count_1 > count_0:
                     st.session_state.car_pos = move_car(
                         st.session_state.car_pos,
-                        st.session_state.move_multiplier
+                        move_multiplier
                         * (1 + ((percentile_5_2 - entropy_score_2) / percentile_5_2)),
                     )
                     st.session_state.car2_moves += 1
@@ -631,4 +640,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

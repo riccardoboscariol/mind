@@ -7,21 +7,9 @@ import base64
 import io
 import os
 from rdoclient import RandomOrgClient
+import json
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
-
-# Configura Google Sheets
-def configure_google_sheets(json_keyfile_name, sheet_name):
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    credentials = ServiceAccountCredentials.from_json_keyfile_name(json_keyfile_name, scope)
-    client = gspread.authorize(credentials)
-    sheet = client.open(sheet_name).sheet1  # Apri il primo foglio
-    return sheet
-
-# Salva i dati su Google Sheets
-def save_to_google_sheets(sheet, data):
-    sheet.append_row(data)
 
 MAX_BATCH_SIZE = 1000  # Maximum batch size for requests to random.org
 RETRY_LIMIT = 3  # Number of retry attempts for random.org requests
@@ -78,13 +66,21 @@ def image_to_base64(image):
     image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
+def configure_google_sheets(sheet_name):
+    """Configure Google Sheets using credentials from Streamlit Secrets."""
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    credentials_info = json.loads(st.secrets["google_sheets"]["credentials_json"])
+    credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_info, scope)
+    client = gspread.authorize(credentials)
+    sheet = client.open(sheet_name).sheet1  # Open the first sheet
+    return sheet
+
+def save_race_data(sheet, race_data):
+    """Save race data to Google Sheets."""
+    sheet.append_row(race_data)
+
 def main():
     st.set_page_config(page_title="Car Mind Race", layout="wide")
-
-    # Configura Google Sheets
-    json_keyfile_name = "client_secret.json"  # Nome del file JSON delle credenziali
-    sheet_name = "test"  # Nome del foglio di lavoro su Google Sheets
-    sheet = configure_google_sheets(json_keyfile_name, sheet_name)
 
     if "language" not in st.session_state:
         st.session_state.language = "Italiano"
@@ -156,6 +152,123 @@ def main():
 
     st.title(title_text)
 
+    # Generate a unique query string to prevent caching
+    unique_query_string = f"?v={int(time.time())}"
+
+    st.markdown(
+        f"""
+        <style>
+        .stSlider > div > div > div > div {{
+            background: white;
+        }}
+        .stSlider > div > div > div {{
+            background: #f0f0f0; /* Lighter color for the slider track */
+        }}
+        .stSlider > div > div > div > div > div {{
+            background: transparent; /* Make slider thumb invisible */
+            border-radius: 50%;
+            height: 0px;  /* Reduce slider thumb height */
+            width: 0px;  /* Reduce slider thumb width */
+            position: relative;
+            top: 0px; /* Correct slider thumb position */
+        }}
+        .slider-container {{
+            position: relative;
+            height: 250px; /* Height to fit sliders and cars */
+            margin-bottom: 50px;
+        }}
+        .slider-container.first {{
+            margin-top: 50px;
+            margin-bottom: 40px;
+        }}
+        .car-image {{
+            position: absolute;
+            top: 50px;  /* Move car 3px higher */
+            left: 0px;
+            width: 150px;  /* Width of the car image */
+            z-index: 20;  /* Ensure cars are above numbers */
+        }}
+        .number-image {{
+            position: absolute;
+            top: calc(28px - 1px);  /* Adjust position: 1px lower */
+            left: calc(80px - 7px); /* Adjust position: 7px to the left */
+            transform: translateX(-50%); /* Center horizontally */
+            width: calc(110px + 10px);  /* Width of the number images slightly larger */
+            z-index: 10;  /* Ensure numbers are below cars */
+            display: none; /* Initially hide numbers */
+        }}
+        .flag-image {{
+            position: absolute;
+            top: 25px;  /* Position for flag */
+            width: 150px;
+            left: 93%;  /* Move flag 3px left */
+        }}
+        .slider-container input[type=range] {{
+            -webkit-appearance: none;
+            width: 100%;
+            position: absolute;
+            top: 138px;  /* Slider 22px higher */
+            background: #f0f0f0; /* Slider track color */
+        }}
+        .slider-container input[type=range]:focus {{
+            outline: none;
+        }}
+        .slider-container input[type=range]::-webkit-slider-runnable-track {{
+            width: 100%;
+            height: 8px;
+            background: #f0f0f0; /* Track color */
+            border-radius: 5px;
+            cursor: pointer;
+        }}
+        .slider-container input[type=range]::-webkit-slider-thumb {{
+            -webkit-appearance: none;
+            appearance: none;
+            width: 10px; /* Thumb width */
+            height: 20px; /* Thumb height */
+            background: transparent; /* Make thumb invisible */
+            cursor: pointer;
+            margin-top: -6px; /* Adjust thumb position to align with the track */
+            visibility: hidden; /* Hide the thumb */
+        }}
+        .slider-container input[type=range]::-moz-range-thumb {{
+            width: 10px; /* Thumb width */
+            height: 20px; /* Thumb height */
+            background: transparent; /* Make thumb invisible */
+            cursor: pointer;
+            visibility: hidden; /* Hide the thumb */
+        }}
+        .slider-container input[type=range]::-ms-thumb {{
+            width: 10px; /* Thumb width */
+            height: 20px; /* Thumb height */
+            background: transparent; /* Make thumb invisible */
+            cursor: pointer;
+            visibility: hidden; /* Hide the thumb */
+        }}
+        .stButton > button {{
+            display: inline-block;
+            margin: 5px; /* Margin between buttons */
+            padding: 0.5em 2em; /* Padding adjustment for buttons */
+            border-radius: 12px; /* Rounded border */
+            background-color: #f0f0f0; /* Initial background color */
+            color: black;
+            border: 1px solid #ccc;
+            font-size: 16px; /* Text size */
+            cursor: pointer;
+        }}
+        .stButton > button:focus {{
+            outline: none;
+            background-color: #ddd; /* Color when selected */
+        }}
+        .stException {{
+            display: none;  /* Nascondi errori */
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(instruction_text)
+
     if "player_choice" not in st.session_state:
         st.session_state.player_choice = None
     if "car_pos" not in st.session_state:
@@ -195,6 +308,7 @@ def main():
     )
     stop_button = st.sidebar.button(stop_race_text, key="stop_button")
 
+    # Persist API key in session state
     st.session_state.api_key = st.sidebar.text_input(
         api_key_text, key="api_key_input", value=st.session_state.api_key, type="password"
     )
@@ -203,11 +317,14 @@ def main():
     if st.session_state.api_key:
         client = configure_random_org(st.session_state.api_key)
 
+    st.sidebar.markdown(api_description_text)
+
     download_menu = st.sidebar.expander("Download")
     with download_menu:
         download_button = st.button(download_data_text, key="download_button")
     reset_button = st.sidebar.button(reset_game_text, key="reset_button")
 
+    # Default move multiplier set to 50 instead of 20
     move_multiplier = st.sidebar.slider(
         move_multiplier_text, min_value=1, max_value=100, value=50, key="move_multiplier"
     )
@@ -222,16 +339,16 @@ def main():
     # Load images for numbers and resize further to 120x120 pixels
     number_0_green_image = Image.open(os.path.join(image_dir, "0green.png")).resize(
         (120, 120)
-    )
+    )  # Slightly larger
     number_1_green_image = Image.open(os.path.join(image_dir, "1green.png")).resize(
         (120, 120)
-    )
+    )  # Slightly larger
     number_0_red_image = Image.open(os.path.join(image_dir, "0red.png")).resize(
         (120, 120)
-    )
+    )  # Slightly larger
     number_1_red_image = Image.open(os.path.join(image_dir, "1red.png")).resize(
         (120, 120)
-    )
+    )  # Slightly larger
 
     st.write(choose_bit_text)
 
@@ -254,16 +371,33 @@ def main():
         st.session_state.player_choice = 1
         st.session_state.green_car_number_image = number_1_green_image
         st.session_state.red_car_number_image = number_0_red_image
+        st.session_state.button1_active = True
+        st.session_state.button0_active = False
 
     if button0:
         st.session_state.player_choice = 0
         st.session_state.green_car_number_image = number_0_green_image
         st.session_state.red_car_number_image = number_1_red_image
+        st.session_state.button0_active = True
+        st.session_state.button1_active = False
 
     # Assign the chosen images if a choice has been made
     if st.session_state.player_choice is not None:
         green_car_number_image = st.session_state.green_car_number_image
         red_car_number_image = st.session_state.red_car_number_image
+
+    # Active button style
+    active_button_style = """
+    <style>
+    div.stButton > button[title="Scegli il bit 1"] { background-color: #90EE90; }
+    div.stButton > button[title="Scegli il bit 0"] { background-color: #FFB6C1; }
+    .number-image.show {
+        display: block;
+    }
+    </style>
+    """
+    if st.session_state.player_choice == 1 or st.session_state.player_choice == 0:
+        st.markdown(active_button_style, unsafe_allow_html=True)
 
     car_image_base64 = image_to_base64(car_image)
     car2_image_base64 = image_to_base64(car2_image)
@@ -321,22 +455,19 @@ def main():
         st.session_state.running = False
         st.session_state.show_retry_popup = True
         st.success(win_message.format(winner))
-        
-        # Salva i dati su Google Sheets
-        end_time = time.time()
-        duration = end_time - st.session_state.car_start_time
-        api_key_used = "Sì" if st.session_state.api_key else "No"
-        data = [
-            "riccardoboscariol97@gmail.com",  # Recapito
-            "Verde",  # Macchina scelta
-            st.session_state.player_choice,  # Bit scelto
-            st.session_state.move_multiplier,  # Moltiplicatore di movimento
-            winner,  # Esito
-            round(duration, 2),  # Durata
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # Data e ora
-            api_key_used  # Chiave API random.org usata?
+        show_retry_popup()
+
+        # Save race data to Google Sheets
+        race_data = [
+            st.session_state.language,
+            st.session_state.player_choice,
+            st.session_state.car_pos,
+            st.session_state.car2_pos,
+            winner,
+            time.time() - st.session_state.car_start_time,
+            st.session_state.api_key != ""
         ]
-        save_to_google_sheets(sheet, data)
+        save_race_data(sheet, race_data)
 
     def reset_game():
         """Reset the game state."""
@@ -363,6 +494,10 @@ def main():
             if st.button(retry_text, key=f"retry_button_{st.session_state.widget_key_counter}"):
                 reset_game()
 
+    # Connect to Google Sheets
+    sheet_name = "test"
+    sheet = configure_google_sheets(sheet_name)
+
     if start_button and st.session_state.player_choice is not None:
         st.session_state.running = True
         st.session_state.car_start_time = time.time()
@@ -376,10 +511,15 @@ def main():
             start_time = time.time()
 
             # Get random numbers from random.org
-            random_bits_1, random_org_success_1 = get_random_bits_from_random_org(1000, client)
-            random_bits_2, random_org_success_2 = get_random_bits_from_random_org(1000, client)
+            random_bits_1, random_org_success_1 = get_random_bits_from_random_org(
+                1000, client
+            )
+            random_bits_2, random_org_success_2 = get_random_bits_from_random_org(
+                1000, client
+            )
 
             if not random_org_success_1 and not random_org_success_2:
+                # Only show warning once if random.org fails
                 if not st.session_state.warned_random_org:
                     st.session_state.warned_random_org = True
 
@@ -405,13 +545,15 @@ def main():
                 if st.session_state.player_choice == 1 and count_1 > count_0:
                     st.session_state.car2_pos = move_car(
                         st.session_state.car2_pos,
-                        move_multiplier * (1 + ((percentile_5_1 - entropy_score_1) / percentile_5_1)),
+                        move_multiplier
+                        * (1 + ((percentile_5_1 - entropy_score_1) / percentile_5_1)),
                     )
                     st.session_state.car1_moves += 1
                 elif st.session_state.player_choice == 0 and count_0 > count_1:
                     st.session_state.car2_pos = move_car(
                         st.session_state.car2_pos,
-                        move_multiplier * (1 + ((percentile_5_1 - entropy_score_1) / percentile_5_1)),
+                        move_multiplier
+                        * (1 + ((percentile_5_1 - entropy_score_1) / percentile_5_1)),
                     )
                     st.session_state.car1_moves += 1
 
@@ -419,13 +561,15 @@ def main():
                 if st.session_state.player_choice == 1 and count_0 > count_1:
                     st.session_state.car_pos = move_car(
                         st.session_state.car_pos,
-                        move_multiplier * (1 + ((percentile_5_2 - entropy_score_2) / percentile_5_2)),
+                        move_multiplier
+                        * (1 + ((percentile_5_2 - entropy_score_2) / percentile_5_2)),
                     )
                     st.session_state.car2_moves += 1
                 elif st.session_state.player_choice == 0 and count_1 > count_0:
                     st.session_state.car_pos = move_car(
                         st.session_state.car_pos,
-                        move_multiplier * (1 + ((percentile_5_2 - entropy_score_2) / percentile_5_2)),
+                        move_multiplier
+                        * (1 + ((percentile_5_2 - entropy_score_2) / percentile_5_2)),
                     )
                     st.session_state.car2_moves += 1
 
@@ -439,10 +583,15 @@ def main():
             time_elapsed = time.time() - start_time
             time.sleep(max(REQUEST_INTERVAL - time_elapsed, 0))
 
+        if st.session_state.show_retry_popup:
+            show_retry_popup()
+
     except Exception as e:
-        pass
+        # Silence the error to avoid it appearing on the frontend
+        st.error(f"Error during race execution: {e}")
 
     if download_button:
+        # Create DataFrame with "Green Car" and "Red Car" columns
         df = pd.DataFrame(
             {
                 "Macchina verde": [
@@ -469,4 +618,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

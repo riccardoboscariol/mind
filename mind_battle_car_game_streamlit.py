@@ -73,29 +73,28 @@ def configure_google_sheets(sheet_name):
     credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_info, scope)
     client = gspread.authorize(credentials)
     sheet = client.open(sheet_name)
-    return sheet
+    sheet1 = sheet.sheet1  # First sheet
+    sheet2 = sheet.worksheet("Foglio2")  # Second sheet
+    return sheet1, sheet2
 
 def save_race_data(sheet, race_data):
     """Save race data to Google Sheets."""
     try:
-        sheet.sheet1.append_row(race_data)
-        st.write("Dati salvati con successo su Google Sheets")
+        sheet.append_row(race_data)
+        st.write("Data successfully saved to Google Sheets")
     except Exception as e:
-        st.error(f"Errore durante il salvataggio su Google Sheets: {e}")
+        st.error(f"Error saving data to Google Sheets: {e}")
 
-def save_random_bits(sheet, red_bits, green_bits):
-    """Save random bits for both cars to a second sheet in Google Sheets."""
+def save_random_bits(sheet, bits_red, bits_green):
+    """Save the random bits to the second sheet."""
     try:
-        worksheet = sheet.get_worksheet(1)  # Get the second sheet
-        if not worksheet:
-            worksheet = sheet.add_worksheet(title="Random Bits", rows="1000", cols="2")
-
-        worksheet.append_row(["".join(map(str, red_bits))])
-        worksheet.append_row(["".join(map(str, green_bits))])
-        worksheet.append_row([])  # Empty row as separator
-        st.write("Bit casuali salvati con successo su Google Sheets")
+        # Combine bits into a string and save them to separate rows
+        sheet.append_row(["Red Car Bits"] + bits_red)
+        sheet.append_row(["Green Car Bits"] + bits_green)
+        sheet.append_row([])  # Add an empty row to separate races
+        st.write("Random bits successfully saved to Google Sheets")
     except Exception as e:
-        st.error(f"Errore durante il salvataggio dei bit casuali su Google Sheets: {e}")
+        st.error(f"Error saving random bits to Google Sheets: {e}")
 
 def main():
     st.set_page_config(page_title="Car Mind Race", layout="wide")
@@ -378,11 +377,17 @@ def main():
     col1, col2 = st.columns([1, 1])
     with col1:
         button1 = st.button(
-            "Scegli 1" if st.session_state.language == "Italiano" else "Choose 1", key="button1", use_container_width=True, help="Scegli il bit 1"
+            "Scegli 1" if st.session_state.language == "Italiano" else "Choose 1", 
+            key="button1", 
+            use_container_width=True, 
+            help="Scegli il bit 1" if st.session_state.language == "Italiano" else "Choose bit 1"
         )
     with col2:
         button0 = st.button(
-            "Scegli 0" if st.session_state.language == "Italiano" else "Choose 0", key="button0", use_container_width=True, help="Scegli il bit 0"
+            "Scegli 0" if st.session_state.language == "Italiano" else "Choose 0", 
+            key="button0", 
+            use_container_width=True, 
+            help="Scegli il bit 0" if st.session_state.language == "Italiano" else "Choose bit 0"
         )
 
     if button1:
@@ -477,19 +482,19 @@ def main():
 
         # Save race data to Google Sheets
         race_data = [
-            st.session_state.language if st.session_state.language != "Italiano" else "Italian",
+            "Italian" if st.session_state.language == "Italiano" else "English",
             st.session_state.player_choice,
             st.session_state.car_pos,
             st.session_state.car2_pos,
             winner,
             time.time() - st.session_state.car_start_time,
             st.session_state.api_key != "",
-            move_multiplier
+            st.session_state.move_multiplier  # Save the movement multiplier value
         ]
-        save_race_data(sheet, race_data)
+        save_race_data(sheet1, race_data)
 
         # Save random bits to the second sheet
-        save_random_bits(sheet, st.session_state.random_numbers_1, st.session_state.random_numbers_2)
+        save_random_bits(sheet2, st.session_state.random_numbers_1, st.session_state.random_numbers_2)
 
     def reset_game():
         """Reset the game state."""
@@ -517,8 +522,7 @@ def main():
                 reset_game()
 
     # Connect to Google Sheets
-    sheet_name = "test"
-    sheet = configure_google_sheets(sheet_name)
+    sheet1, sheet2 = configure_google_sheets("test")
 
     if start_button and st.session_state.player_choice is not None:
         st.session_state.running = True
@@ -567,14 +571,14 @@ def main():
                 if st.session_state.player_choice == 1 and count_1 > count_0:
                     st.session_state.car2_pos = move_car(
                         st.session_state.car2_pos,
-                        move_multiplier
+                        st.session_state.move_multiplier
                         * (1 + ((percentile_5_1 - entropy_score_1) / percentile_5_1)),
                     )
                     st.session_state.car1_moves += 1
                 elif st.session_state.player_choice == 0 and count_0 > count_1:
                     st.session_state.car2_pos = move_car(
                         st.session_state.car2_pos,
-                        move_multiplier
+                        st.session_state.move_multiplier
                         * (1 + ((percentile_5_1 - entropy_score_1) / percentile_5_1)),
                     )
                     st.session_state.car1_moves += 1
@@ -583,14 +587,14 @@ def main():
                 if st.session_state.player_choice == 1 and count_0 > count_1:
                     st.session_state.car_pos = move_car(
                         st.session_state.car_pos,
-                        move_multiplier
+                        st.session_state.move_multiplier
                         * (1 + ((percentile_5_2 - entropy_score_2) / percentile_5_2)),
                     )
                     st.session_state.car2_moves += 1
                 elif st.session_state.player_choice == 0 and count_1 > count_0:
                     st.session_state.car_pos = move_car(
                         st.session_state.car_pos,
-                        move_multiplier
+                        st.session_state.move_multiplier
                         * (1 + ((percentile_5_2 - entropy_score_2) / percentile_5_2)),
                     )
                     st.session_state.car2_moves += 1
@@ -640,3 +644,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

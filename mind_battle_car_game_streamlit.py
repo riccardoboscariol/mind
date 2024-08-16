@@ -156,7 +156,7 @@ def main():
             The program uses random.org. Entropy is calculated using Shannon's formula.
             The car moves if the entropy is below the 5th percentile and the chosen digit is more frequent.
             The movement distance is calculated with the formula: Distance = Multiplier × (1 + ((percentile - entropy) / percentile)).
-            Email reference: @riccardoboscariol97@gmail.com
+               Email reference: @riccardoboscariol97@gmail.com
             """
         choose_bit_text = "Choose your bit for the green car. You can also choose the 'speed' of movement by setting the score on the 'Movement Multiplier' slider."
         start_race_text = "Start Race"

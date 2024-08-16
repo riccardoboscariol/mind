@@ -74,8 +74,7 @@ def configure_google_sheets(sheet_name):
     client = gspread.authorize(credentials)
     sheet = client.open(sheet_name)
     sheet1 = sheet.sheet1  # First sheet
-    sheet2 = sheet.worksheet("Foglio2")  # Second sheet
-    return sheet1, sheet2
+    return sheet1
 
 def save_race_data(sheet, race_data):
     """Save race data to Google Sheets."""
@@ -84,24 +83,6 @@ def save_race_data(sheet, race_data):
         st.write("Data successfully saved to Google Sheets")
     except Exception as e:
         st.error(f"Error saving data to Google Sheets: {e}")
-
-def save_random_bit_sums(sheet, bits_red, bits_green):
-    """Save the sum of random bits to the second sheet."""
-    try:
-        # Calculate sums for red car and green car
-        red_car_0s = bits_red.count(0)
-        red_car_1s = bits_red.count(1)
-        green_car_0s = bits_green.count(0)
-        green_car_1s = bits_green.count(1)
-        
-        # Save the sums to the sheet
-        sheet.append_row(["Red Car - 0s", red_car_0s, "Red Car - 1s", red_car_1s])
-        sheet.append_row(["Green Car - 0s", green_car_0s, "Green Car - 1s", green_car_1s])
-        sheet.append_row([])  # Add an empty row to separate races
-        
-        st.write("Random bit sums successfully saved to Google Sheets")
-    except Exception as e:
-        st.error(f"Error saving random bit sums to Google Sheets: {e}")
 
 def main():
     st.set_page_config(page_title="Car Mind Race", layout="wide")
@@ -115,6 +96,9 @@ def main():
     if "warned_random_org" not in st.session_state:
         st.session_state.warned_random_org = False
 
+    if "consent_given" not in st.session_state:
+        st.session_state.consent_given = False
+
     # Function to change language
     def toggle_language():
         if st.session_state.language == "Italiano":
@@ -127,6 +111,12 @@ def main():
 
     if st.session_state.language == "Italiano":
         title_text = "Car Mind Race"
+        consent_text = """
+        **Informativa e Consenso all'Utilizzo dei Dati**
+
+        I dati raccolti saranno utilizzati esclusivamente per scopi di ricerca scientifica, in conformità con le leggi vigenti sulla privacy.
+        """
+        accept_text = "[ ] Accetto e desidero procedere con la gara."
         instruction_text = """
             Il primo giocatore sceglie la macchina verde e la cifra che vuole influenzare.
             L'altro giocatore (o il PC) avrà la macchina rossa e l'altra cifra.
@@ -151,6 +141,12 @@ def main():
         move_multiplier_text = "Moltiplicatore di Movimento"
     else:
         title_text = "Car Mind Race"
+        consent_text = """
+        **Data Usage and Consent**
+
+        The data collected will be used exclusively for scientific research purposes, in accordance with current privacy laws.
+        """
+        accept_text = "[ ] I accept and wish to proceed with the race."
         instruction_text = """
             The first player chooses the green car and the digit they want to influence.
             The other player (or the PC) will have the red car and the other digit.
@@ -175,6 +171,16 @@ def main():
         move_multiplier_text = "Movement Multiplier"
 
     st.title(title_text)
+
+    # Consent Form
+    if not st.session_state.consent_given:
+        st.markdown(consent_text)
+        consent_checkbox = st.checkbox(accept_text)
+
+        if consent_checkbox:
+            st.session_state.consent_given = True
+        else:
+            st.stop()  # Stop the app until consent is given
 
     # Generate a unique query string to prevent caching
     unique_query_string = f"?v={int(time.time())}"
@@ -500,9 +506,6 @@ def main():
         ]
         save_race_data(sheet1, race_data)
 
-        # Save random bit sums to the second sheet
-        save_random_bit_sums(sheet2, st.session_state.random_numbers_1, st.session_state.random_numbers_2)
-
     def reset_game():
         """Reset the game state."""
         st.session_state.car_pos = 50
@@ -529,7 +532,7 @@ def main():
                 reset_game()
 
     # Connect to Google Sheets
-    sheet1, sheet2 = configure_google_sheets("test")
+    sheet1 = configure_google_sheets("test")
 
     if start_button and st.session_state.player_choice is not None:
         st.session_state.running = True
@@ -651,3 +654,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

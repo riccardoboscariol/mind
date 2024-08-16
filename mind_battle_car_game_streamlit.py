@@ -80,6 +80,7 @@ def configure_google_sheets(sheet_name):
 def save_race_data(sheet, race_data):
     """Save race data to Google Sheets."""
     try:
+        race_data = [int(val) if isinstance(val, np.integer) else val for val in race_data]
         sheet.append_row(race_data)
         st.write("Data successfully saved to Google Sheets")
     except Exception as e:
@@ -88,9 +89,12 @@ def save_race_data(sheet, race_data):
 def save_random_bits(sheet, bits_red, bits_green):
     """Save the random bits to the second sheet."""
     try:
-        # Combine bits into a string and save them to separate rows
-        sheet.append_row(["Red Car Bits"] + bits_red)
-        sheet.append_row(["Green Car Bits"] + bits_green)
+        # Convert the bits to strings
+        bits_red = [int(bit) for bit in bits_red]
+        bits_green = [int(bit) for bit in bits_green]
+        # Save them to separate rows
+        sheet.append_row(bits_red)
+        sheet.append_row(bits_green)
         sheet.append_row([])  # Add an empty row to separate races
         st.write("Random bits successfully saved to Google Sheets")
     except Exception as e:
@@ -168,6 +172,121 @@ def main():
         move_multiplier_text = "Movement Multiplier"
 
     st.title(title_text)
+
+    # Generate a unique query string to prevent caching
+    unique_query_string = f"?v={int(time.time())}"
+
+    st.markdown(
+        f"""
+        <style>
+        .stSlider > div > div > div > div {{
+            background: white;
+        }}
+        .stSlider > div > div > div {{
+            background: #f0f0f0; /* Lighter color for the slider track */
+        }}
+        .stSlider > div > div > div > div > div {{
+            background: transparent; /* Make slider thumb invisible */
+            border-radius: 50%;
+            height: 0px;  /* Reduce slider thumb height */
+            width: 0px;  /* Reduce slider thumb width */
+            position: relative;
+            top: 0px; /* Correct slider thumb position */
+        }}
+        .slider-container {{
+            position: relative;
+            height: 250px; /* Height to fit sliders and cars */
+            margin-bottom: 50px;
+        }}
+        .slider-container.first {{
+            margin-top: 50px;
+            margin-bottom: 40px;
+        }}
+        .car-image {{
+            position: absolute;
+            top: 50px;  /* Move car 3px higher */
+            left: 0px;
+            width: 150px;  /* Width of the car image */
+            z-index: 20;  /* Ensure cars are above numbers */
+        }}
+        .number-image {{
+            position: absolute;
+            top: calc(28px - 1px);  /* Adjust position: 1px lower */
+            left: calc(80px - 7px); /* Adjust position: 7px to the left */
+            transform: translateX(-50%); /* Center horizontally */
+            width: calc(110px + 10px);  /* Width of the number images slightly larger */
+            z-index: 10;  /* Ensure numbers are below cars */
+            display: none; /* Initially hide numbers */
+        }}
+        .flag-image {{
+            position: absolute;
+            top: 25px;  /* Position for flag */
+            width: 150px;
+            left: 93%;  /* Move flag 3px left */
+        }}
+        .slider-container input[type=range] {{
+            -webkit-appearance: none;
+            width: 100%;
+            position: absolute;
+            top: 138px;  /* Slider 22px higher */
+            background: #f0f0f0; /* Slider track color */
+        }}
+        .slider-container input[type=range]:focus {{
+            outline: none;
+        }}
+        .slider-container input[type=range]::-webkit-slider-runnable-track {{
+            width: 100%;
+            height: 8px;
+            background: #f0f0f0; /* Track color */
+            border-radius: 5px;
+            cursor: pointer;
+        }}
+        .slider-container input[type=range]::-webkit-slider-thumb {{
+            -webkit-appearance: none;
+            appearance: none;
+            width: 10px; /* Thumb width */
+            height: 20px; /* Thumb height */
+            background: transparent; /* Make thumb invisible */
+            cursor: pointer;
+            margin-top: -6px; /* Adjust thumb position to align with the track */
+            visibility: hidden; /* Hide the thumb */
+        }}
+        .slider-container input[type=range]::-moz-range-thumb {{
+            width: 10px; /* Thumb width */
+            height: 20px; /* Thumb height */
+            background: transparent; /* Make thumb invisible */
+            cursor: pointer;
+            visibility: hidden; /* Hide the thumb */
+        }}
+        .slider-container input[type=range]::-ms-thumb {{
+            width: 10px; /* Thumb width */
+            height: 20px; /* Thumb height */
+            background: transparent; /* Make thumb invisible */
+            cursor: pointer;
+            visibility: hidden; /* Hide the thumb */
+        }}
+        .stButton > button {{
+            display: inline-block;
+            margin: 5px; /* Margin between buttons */
+            padding: 0.5em 2em; /* Padding adjustment for buttons */
+            border-radius: 12px; /* Rounded border */
+            background-color: #f0f0f0; /* Initial background color */
+            color: black;
+            border: 1px solid #ccc;
+            font-size: 16px; /* Text size */
+            cursor: pointer;
+        }}
+        .stButton > button:focus {{
+            outline: none;
+            background-color: #ddd; /* Color when selected */
+        }}
+        .stException {{
+            display: none;  /* Nascondi errori */
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.markdown(instruction_text)
 
@@ -353,9 +472,9 @@ def main():
     def check_winner():
         """Check if there is a winner."""
         if st.session_state.car_pos >= 900:  # Shorten the track to leave room for the flag
-            return "Red"
+            return "Red" if st.session_state.language == "English" else "Rossa"
         elif st.session_state.car2_pos >= 900:  # Shorten the track to leave room for the flag
-            return "Green"
+            return "Green" if st.session_state.language == "English" else "Verde"
         return None
 
     def end_race(winner):
@@ -371,7 +490,7 @@ def main():
             st.session_state.player_choice,
             st.session_state.car_pos,
             st.session_state.car2_pos,
-            winner,
+            "Green" if winner == "Verde" else "Red" if winner == "Rossa" else winner,
             time.time() - st.session_state.car_start_time,
             st.session_state.api_key != "",
             st.session_state.move_multiplier  # Save the movement multiplier value
@@ -529,4 +648,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

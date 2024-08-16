@@ -125,7 +125,6 @@ def main():
             Il programma utilizza random.org. L'entropia è calcolata usando la formula di Shannon.
             La macchina si muove se l'entropia è inferiore al 5° percentile e la cifra scelta è più frequente.
             La distanza di movimento è calcolata con la formula: Distanza = Moltiplicatore × (1 + ((percentile - entropia) / percentile)).
-            Riferimento Email: @riccardoboscariol97@gmail.com
             """
         choose_bit_text = "Scegli il tuo bit per la macchina verde. Puoi scegliere anche la 'velocità' di movimento indicando il punteggio nello slider 'Moltiplicatore di Movimento'."
         start_race_text = "Avvia Gara"
@@ -139,6 +138,7 @@ def main():
         win_message = "Vince l'auto {}, complimenti!"
         api_description_text = "Per garantire il corretto utilizzo, è consigliabile acquistare un piano per l'inserimento della chiave API da questo sito: [https://api.random.org/pricing](https://api.random.org/pricing)."
         move_multiplier_text = "Moltiplicatore di Movimento"
+        email_ref_text = "Riferimento Email: riccardoboscariol97@gmail.com"
     else:
         title_text = "Car Mind Race"
         consent_text = """
@@ -156,7 +156,6 @@ def main():
             The program uses random.org. Entropy is calculated using Shannon's formula.
             The car moves if the entropy is below the 5th percentile and the chosen digit is more frequent.
             The movement distance is calculated with the formula: Distance = Multiplier × (1 + ((percentile - entropy) / percentile)).
-               Email reference: @riccardoboscariol97@gmail.com
             """
         choose_bit_text = "Choose your bit for the green car. You can also choose the 'speed' of movement by setting the score on the 'Movement Multiplier' slider."
         start_race_text = "Start Race"
@@ -170,6 +169,7 @@ def main():
         win_message = "The {} car wins, congratulations!"
         api_description_text = "To ensure proper use, it is advisable to purchase a plan for entering the API key from this site: [https://api.random.org/pricing](https://api.random.org/pricing)."
         move_multiplier_text = "Movement Multiplier"
+        email_ref_text = "Email Referee: riccardoboscariol97@gmail.com"
 
     st.title(title_text)
 
@@ -359,6 +359,9 @@ def main():
     move_multiplier = st.sidebar.slider(
         move_multiplier_text, min_value=1, max_value=100, value=50, key="move_multiplier"
     )
+
+    # Add email reference at the bottom of the sidebar
+    st.sidebar.markdown(f"### {email_ref_text}")
 
     image_dir = os.path.abspath(os.path.dirname(__file__))
     car_image = Image.open(os.path.join(image_dir, "car.png")).resize((150, 150))  # Red car

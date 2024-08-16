@@ -80,7 +80,6 @@ def save_race_data(sheet, race_data):
     """Save race data to Google Sheets."""
     try:
         sheet.append_row(race_data)
-        st.write("Data successfully saved to Google Sheets")
     except Exception as e:
         st.error(f"Error saving data to Google Sheets: {e}")
 
@@ -481,16 +480,16 @@ def main():
     def check_winner():
         """Check if there is a winner."""
         if st.session_state.car_pos >= 900:  # Shorten the track to leave room for the flag
-            return "Red"
+            return "Rossa" if st.session_state.language == "Italiano" else "Red"
         elif st.session_state.car2_pos >= 900:  # Shorten the track to leave room for the flag
-            return "Green"
+            return "Verde" if st.session_state.language == "Italiano" else "Green"
         return None
 
     def end_race(winner):
         """End the race and show the winner."""
         st.session_state.running = False
         st.session_state.show_retry_popup = True
-        st.success(win_message.format("Verde" if winner == "Green" and st.session_state.language == "Italiano" else winner))
+        st.success(win_message.format(winner))
         show_retry_popup()
 
         # Calculate the sums for red and green car
@@ -512,7 +511,9 @@ def main():
             red_car_0s,
             red_car_1s,
             green_car_0s,
-            green_car_1s
+            green_car_1s,
+            st.session_state.car1_moves,  # Number of moves by red car
+            st.session_state.car2_moves  # Number of moves by green car
         ]
         save_race_data(sheet1, race_data)
 

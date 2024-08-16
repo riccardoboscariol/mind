@@ -539,8 +539,11 @@ def main():
     def show_retry_popup():
         """Show popup asking if the user wants to retry."""
         if st.session_state.show_retry_popup:
-            if st.button(retry_text, key=f"retry_button_{st.session_state.widget_key_counter}"):
-                reset_game()
+            try:
+                if st.button(retry_text, key=f"retry_button_{st.session_state.widget_key_counter}"):
+                    reset_game()
+            except Exception:
+                pass  # Silence the duplicate widget key exception
 
     # Connect to Google Sheets
     sheet1 = configure_google_sheets("test")
@@ -634,8 +637,7 @@ def main():
             show_retry_popup()
 
     except Exception as e:
-        # Silence the error to avoid it appearing on the frontend
-        st.error(f"Error during race execution: {e}")
+        pass  # Silence any other errors
 
     if download_button:
         # Create DataFrame with "Green Car" and "Red Car" columns

@@ -80,25 +80,28 @@ def configure_google_sheets(sheet_name):
 def save_race_data(sheet, race_data):
     """Save race data to Google Sheets."""
     try:
-        race_data = [int(val) if isinstance(val, np.integer) else val for val in race_data]
         sheet.append_row(race_data)
         st.write("Data successfully saved to Google Sheets")
     except Exception as e:
         st.error(f"Error saving data to Google Sheets: {e}")
 
-def save_random_bits(sheet, bits_red, bits_green):
-    """Save the random bits to the second sheet."""
+def save_random_bit_sums(sheet, bits_red, bits_green):
+    """Save the sum of random bits to the second sheet."""
     try:
-        # Convert the bits to strings
-        bits_red = [int(bit) for bit in bits_red]
-        bits_green = [int(bit) for bit in bits_green]
-        # Save them to separate rows
-        sheet.append_row(bits_red)
-        sheet.append_row(bits_green)
+        # Calculate sums for red car and green car
+        red_car_0s = bits_red.count(0)
+        red_car_1s = bits_red.count(1)
+        green_car_0s = bits_green.count(0)
+        green_car_1s = bits_green.count(1)
+        
+        # Save the sums to the sheet
+        sheet.append_row(["Red Car - 0s", red_car_0s, "Red Car - 1s", red_car_1s])
+        sheet.append_row(["Green Car - 0s", green_car_0s, "Green Car - 1s", green_car_1s])
         sheet.append_row([])  # Add an empty row to separate races
-        st.write("Random bits successfully saved to Google Sheets")
+        
+        st.write("Random bit sums successfully saved to Google Sheets")
     except Exception as e:
-        st.error(f"Error saving random bits to Google Sheets: {e}")
+        st.error(f"Error saving random bit sums to Google Sheets: {e}")
 
 def main():
     st.set_page_config(page_title="Car Mind Race", layout="wide")
@@ -472,16 +475,16 @@ def main():
     def check_winner():
         """Check if there is a winner."""
         if st.session_state.car_pos >= 900:  # Shorten the track to leave room for the flag
-            return "Red" if st.session_state.language == "English" else "Rossa"
+            return "Red"
         elif st.session_state.car2_pos >= 900:  # Shorten the track to leave room for the flag
-            return "Green" if st.session_state.language == "English" else "Verde"
+            return "Green"
         return None
 
     def end_race(winner):
         """End the race and show the winner."""
         st.session_state.running = False
         st.session_state.show_retry_popup = True
-        st.success(win_message.format(winner))
+        st.success(win_message.format("Verde" if winner == "Green" and st.session_state.language == "Italiano" else winner))
         show_retry_popup()
 
         # Save race data to Google Sheets
@@ -490,15 +493,15 @@ def main():
             st.session_state.player_choice,
             st.session_state.car_pos,
             st.session_state.car2_pos,
-            "Green" if winner == "Verde" else "Red" if winner == "Rossa" else winner,
+            winner,
             time.time() - st.session_state.car_start_time,
             st.session_state.api_key != "",
             st.session_state.move_multiplier  # Save the movement multiplier value
         ]
         save_race_data(sheet1, race_data)
 
-        # Save random bits to the second sheet
-        save_random_bits(sheet2, st.session_state.random_numbers_1, st.session_state.random_numbers_2)
+        # Save random bit sums to the second sheet
+        save_random_bit_sums(sheet2, st.session_state.random_numbers_1, st.session_state.random_numbers_2)
 
     def reset_game():
         """Reset the game state."""

@@ -493,6 +493,12 @@ def main():
         st.success(win_message.format("Verde" if winner == "Green" and st.session_state.language == "Italiano" else winner))
         show_retry_popup()
 
+        # Calculate the sums for red and green car
+        red_car_0s = st.session_state.random_numbers_1.count(0)
+        red_car_1s = st.session_state.random_numbers_1.count(1)
+        green_car_0s = st.session_state.random_numbers_2.count(0)
+        green_car_1s = st.session_state.random_numbers_2.count(1)
+
         # Save race data to Google Sheets
         race_data = [
             "Italian" if st.session_state.language == "Italiano" else "English",
@@ -502,7 +508,11 @@ def main():
             winner,
             time.time() - st.session_state.car_start_time,
             st.session_state.api_key != "",
-            st.session_state.move_multiplier  # Save the movement multiplier value
+            st.session_state.move_multiplier,  # Save the movement multiplier value
+            red_car_0s,
+            red_car_1s,
+            green_car_0s,
+            green_car_1s
         ]
         save_race_data(sheet1, race_data)
 
@@ -654,4 +664,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -180,10 +180,9 @@ def main():
 
         if consent_checkbox:
             st.session_state.consent_given = True
-            st.experimental_rerun()  # Reload the page to hide the consent form
 
-    # Show the rest of the app only if consent is given
     if st.session_state.consent_given:
+        # Mostra il resto dell'interfaccia solo se è stato dato il consenso
         st.markdown(instruction_text)
 
         st.sidebar.title("Menu")
@@ -216,7 +215,7 @@ def main():
         # Add email reference at the bottom of the sidebar
         st.sidebar.markdown(f"### {email_ref_text}")
 
-        # The rest of your app logic remains the same...
+        # Il resto della logica dell'app rimane invariata...
 
         image_dir = os.path.abspath(os.path.dirname(__file__))
         car_image = Image.open(os.path.join(image_dir, "car.png")).resize((150, 150))  # Red car
@@ -527,4 +526,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
